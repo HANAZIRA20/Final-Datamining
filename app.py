@@ -109,7 +109,6 @@ df_proc = pd.get_dummies(df_proc, drop_first=True)
 X = df_proc.drop(columns=["num"])
 y = df_proc["num"]
 
-# ✅ Tambahkan debug fitur
 st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
 st.write(list(X.columns))
 
@@ -171,25 +170,38 @@ with col1:
     st.text(classification_report(y_test, y_pred))
 
 with col2:
+    # ✅ CONFUSION MATRIX WITH LABELS (TP, TN, FP, FN)
     fig_cm, ax_cm = plt.subplots(figsize=(4,3))
-    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax_cm)
+    cm = confusion_matrix(y_test, y_pred)
+
+    # Label posisi
+    labels = [["TN", "FP"], ["FN", "TP"]]
+
+    sns.heatmap(cm, annot=labels, fmt="", cmap="Blues", ax=ax_cm, cbar=False)
+
+    # Tambahkan angka di bawah label
+    for i in range(2):
+        for j in range(2):
+            ax_cm.text(j + 0.5, i + 0.65, f"{cm[i, j]}", ha='center', va='center', color='black')
+
     ax_cm.set_xlabel("Predicted")
     ax_cm.set_ylabel("Actual")
+    ax_cm.set_title("Confusion Matrix")
     st.pyplot(fig_cm)
 
 st.markdown("""
-### 📘 Penjelasan Confusion Matrix
-- **TP (True Positive)** → Model benar memprediksi pasien sakit  
-- **TN (True Negative)** → Model benar memprediksi pasien sehat  
-- **FP (False Positive)** → Model salah memprediksi pasien sehat sebagai sakit  
-- **FN (False Negative)** → Model salah memprediksi pasien sakit sebagai sehat  
-- FN sangat penting di dunia medis karena pasien sakit bisa tidak terdeteksi.
+### 📘 Penjelasan Confusion Matrix + Warna
+- **TP (True Positive)** → Model benar memprediksi pasien **sakit** (biasanya warna biru tua)
+- **TN (True Negative)** → Model benar memprediksi pasien **sehat** (biru muda)
+- **FP (False Positive)** → Model salah memprediksi pasien sehat sebagai sakit (sering terlihat lebih terang)
+- **FN (False Negative)** → Model salah memprediksi pasien sakit sebagai sehat (warna terang, sangat penting di medis)
+- **FN paling kritis**, karena pasien sakit bisa tidak terdeteksi.
 """)
 
 st.divider()
 
 # ============================================================
-# FEATURE IMPORTANCE (✅ Grafik + Penjelasan Samping)
+# FEATURE IMPORTANCE
 # ============================================================
 if hasattr(model, "feature_importances_"):
     st.subheader("📌 Feature Importance")
@@ -210,7 +222,7 @@ if hasattr(model, "feature_importances_"):
         ### 📘 Penjelasan Feature Importance
         - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi.
         - Semakin panjang batang → semakin besar kontribusi fitur.
-        - Model pohon (Decision Tree / Random Forest) menghitung pentingnya fitur berdasarkan:
+        - Model pohon menghitung pentingnya fitur berdasarkan:
           - Seberapa sering fitur digunakan untuk split
           - Seberapa besar fitur mengurangi impurity
         """)
@@ -218,7 +230,7 @@ if hasattr(model, "feature_importances_"):
 st.divider()
 
 # ============================================================
-# PRECISION-RECALL CURVE (✅ Grafik + Penjelasan Samping)
+# PRECISION-RECALL CURVE
 # ============================================================
 st.subheader("📈 Precision-Recall Curve")
 
