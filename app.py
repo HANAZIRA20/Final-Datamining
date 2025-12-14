@@ -56,28 +56,44 @@ df = df.fillna(df.median(numeric_only=True))
 df = df.fillna(df.mode().iloc[0])
 
 # ============================================================
+# DATA OVERVIEW
+# ============================================================
+st.subheader("📊 1. Data Overview")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("**5 Data Teratas**")
+    st.dataframe(df.head(), use_container_width=True)
+
+with col2:
+    info_df = pd.DataFrame({
+        "Kolom": df.columns,
+        "Tipe Data": df.dtypes.astype(str),
+        "Missing": df.isnull().sum()
+    })
+    st.markdown("**Informasi Dataset**")
+    st.dataframe(info_df, use_container_width=True)
+
+st.divider()
+
+# ============================================================
 # TARGET VARIABLE
 # ============================================================
-st.subheader("🎯 2. Distribusi Target (num)")
+st.subheader("🎯 2. Target Variable")
 
-colA, colB = st.columns([1,1])
+col1, col2 = st.columns(2)
 
-with colA:
-    fig, ax = plt.subplots(figsize=(3,2))
-    df["num"].value_counts().plot(kind="bar", ax=ax, color=["green","red"])
-    ax.set_title("Distribusi Target")
-    ax.set_xlabel("Kelas")
+with col1:
+    st.markdown("**Distribusi Target**")
+    st.dataframe(df["num"].value_counts())
+
+with col2:
+    fig, ax = plt.subplots(figsize=(3.5,2.5))
+    df["num"].value_counts().plot(kind="bar", ax=ax)
+    ax.set_xlabel("Kelas Penyakit")
     ax.set_ylabel("Jumlah")
     st.pyplot(fig)
-
-with colB:
-    st.markdown("""
-    ### 📘 Penjelasan Target (num)
-    - **0** → Pasien **tidak** memiliki penyakit jantung  
-    - **1** → Pasien **memiliki** penyakit jantung  
-    - Grafik ini menunjukkan **jumlah masing-masing kelas**.
-    - Jika kelas 1 lebih sedikit → dataset **imbalanced**, sehingga PR Curve lebih cocok daripada ROC.
-    """)
 
 st.divider()
 
@@ -93,6 +109,7 @@ df_proc = pd.get_dummies(df_proc, drop_first=True)
 X = df_proc.drop(columns=["num"])
 y = df_proc["num"]
 
+# ✅ Tambahkan debug fitur
 st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
 st.write(list(X.columns))
 
@@ -108,6 +125,19 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42,
     stratify=y
 )
+
+st.subheader("📂 4. Pembagian Data")
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Data", df_proc.shape[0])
+with col2:
+    st.metric("Data Training", X_train.shape[0])
+with col3:
+    st.metric("Data Testing", X_test.shape[0])
+
+st.markdown("**Rasio:** 80% Training – 20% Testing")
+st.divider()
 
 # ============================================================
 # MODEL SELECTION
@@ -133,7 +163,7 @@ acc = accuracy_score(y_test, y_pred)
 # ============================================================
 st.subheader("🤖 5. Evaluasi Model")
 
-col1, col2 = st.columns([1,1])
+col1, col2 = st.columns(2)
 
 with col1:
     st.metric("Accuracy", f"{acc:.2f}")
@@ -141,24 +171,25 @@ with col1:
     st.text(classification_report(y_test, y_pred))
 
 with col2:
-    fig_cm, ax_cm = plt.subplots(figsize=(3,2))
+    fig_cm, ax_cm = plt.subplots(figsize=(4,3))
     sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax_cm)
-    ax_cm.set_title("Confusion Matrix")
+    ax_cm.set_xlabel("Predicted")
+    ax_cm.set_ylabel("Actual")
     st.pyplot(fig_cm)
 
 st.markdown("""
 ### 📘 Penjelasan Confusion Matrix
-- **True Positive (TP)** → Model benar memprediksi pasien sakit  
-- **True Negative (TN)** → Model benar memprediksi pasien sehat  
-- **False Positive (FP)** → Model salah memprediksi pasien sehat sebagai sakit  
-- **False Negative (FN)** → Model salah memprediksi pasien sakit sebagai sehat  
+- **TP (True Positive)** → Model benar memprediksi pasien sakit  
+- **TN (True Negative)** → Model benar memprediksi pasien sehat  
+- **FP (False Positive)** → Model salah memprediksi pasien sehat sebagai sakit  
+- **FN (False Negative)** → Model salah memprediksi pasien sakit sebagai sehat  
 - FN sangat penting di dunia medis karena pasien sakit bisa tidak terdeteksi.
 """)
 
 st.divider()
 
 # ============================================================
-# FEATURE IMPORTANCE
+# FEATURE IMPORTANCE (✅ Grafik + Penjelasan Samping)
 # ============================================================
 if hasattr(model, "feature_importances_"):
     st.subheader("📌 Feature Importance")
@@ -177,7 +208,7 @@ if hasattr(model, "feature_importances_"):
     with colB:
         st.markdown("""
         ### 📘 Penjelasan Feature Importance
-        - Menunjukkan fitur mana yang paling berpengaruh.
+        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi.
         - Semakin panjang batang → semakin besar kontribusi fitur.
         - Model pohon (Decision Tree / Random Forest) menghitung pentingnya fitur berdasarkan:
           - Seberapa sering fitur digunakan untuk split
@@ -187,7 +218,7 @@ if hasattr(model, "feature_importances_"):
 st.divider()
 
 # ============================================================
-# PRECISION-RECALL CURVE
+# PRECISION-RECALL CURVE (✅ Grafik + Penjelasan Samping)
 # ============================================================
 st.subheader("📈 Precision-Recall Curve")
 
