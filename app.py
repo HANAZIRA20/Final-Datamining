@@ -33,7 +33,7 @@ st.markdown("<p style='text-align:center;'>Decision Tree & Random Forest | Data 
 st.divider()
 
 # ============================================================
-# LOAD DATASET (AUTO)
+# LOAD DATASET
 # ============================================================
 DATA_PATH = "heart_disease_uci.csv"
 
@@ -43,6 +43,17 @@ if not os.path.exists(DATA_PATH):
 
 df = pd.read_csv(DATA_PATH)
 st.success("✅ Dataset berhasil dimuat")
+
+# ============================================================
+# FIX TARGET → BINARY
+# ============================================================
+df["num"] = df["num"].apply(lambda x: 1 if x > 0 else 0)
+
+# ============================================================
+# HANDLE MISSING VALUE
+# ============================================================
+df = df.fillna(df.median(numeric_only=True))
+df = df.fillna(df.mode().iloc[0])
 
 # ============================================================
 # DATA OVERVIEW
@@ -74,20 +85,18 @@ st.subheader("🎯 2. Target Variable")
 st.markdown("""
 Kolom target yang digunakan adalah **num** dengan keterangan:
 - **0** → Tidak memiliki penyakit jantung  
-- **1 – 4** → Memiliki penyakit jantung  
-
-Model digunakan untuk **memprediksi apakah pasien memiliki penyakit jantung atau tidak**.
+- **1** → Memiliki penyakit jantung  
 """)
 
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("**Distribusi Target**")
-    st.dataframe(df["num"].value_counts().sort_index())
+    st.dataframe(df["num"].value_counts())
 
 with col2:
     fig, ax = plt.subplots(figsize=(4,3))
-    df["num"].value_counts().sort_index().plot(kind="bar", ax=ax)
+    df["num"].value_counts().plot(kind="bar", ax=ax)
     ax.set_xlabel("Kelas Penyakit")
     ax.set_ylabel("Jumlah")
     st.pyplot(fig)
@@ -133,14 +142,12 @@ st.markdown("**Rasio:** 80% Training – 20% Testing")
 st.divider()
 
 # ============================================================
-# NORMALISASI
+# NORMALISASI (HANYA UNTUK MODEL YANG BUTUH)
 # ============================================================
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+scaler = None
 
 # ============================================================
-# SIDEBAR MODEL (TANPA TREE SLIDER)
+# SIDEBAR MODEL
 # ============================================================
 st.sidebar.header("⚙️ Pengaturan Model")
 
@@ -183,75 +190,24 @@ with col2:
 st.divider()
 
 # ============================================================
-# FORM INPUT PASIEN
+# AUTO UI INPUT
 # ============================================================
 st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
 
-col1, col2 = st.columns(2)
+input_values = {}
 
-with col1:
-    age = st.number_input("Usia", 1, 100, 50)
-    trestbps = st.number_input("Tekanan Darah Istirahat", 80, 200, 130)
-    chol = st.number_input("Kolesterol", 100, 400, 220)
-    thalach = st.number_input("Detak Jantung Maksimum", 60, 220, 150)
-    oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
-    ca = st.selectbox("Jumlah Pembuluh Darah Tersumbat", [0, 1, 2, 3])
-
-with col2:
-    sex = st.selectbox("Jenis Kelamin", ["Perempuan", "Laki-laki"])
-    fbs = st.selectbox("Gula Darah Puasa > 120 mg/dL?", ["Tidak", "Ya"])
-    exang = st.selectbox("Nyeri Dada Saat Olahraga?", ["Tidak", "Ya"])
-    cp = st.selectbox("Tipe Nyeri Dada", ["Typical", "Atypical", "Non-anginal", "Asymptomatic"])
-    restecg = st.selectbox("Hasil ECG", ["Normal", "ST-T Abnormality"])
-    slope = st.selectbox("Slope ST Segment", ["Upsloping", "Flat"])
-    thal = st.selectbox("Thalassemia", ["Normal", "Reversable Defect"])
-
-# ============================================================
-# KONVERSI INPUT
-# ============================================================
-input_data = {col: 0 for col in X.columns}
-input_data.update({
-    "age": age,
-    "trestbps": trestbps,
-    "chol": chol,
-    "thalach": thalach,
-    "oldpeak": oldpeak,
-    "ca": ca,
-    "sex_Male": 1 if sex == "Laki-laki" else 0,
-    "fbs": 1 if fbs == "Ya" else 0,
-    "exang": 1 if exang == "Ya" else 0
-})
-
-cp_map = {
-    "Typical": "cp_typical angina",
-    "Atypical": "cp_atypical angina",
-    "Non-anginal": "cp_non-anginal"
-}
-if cp in cp_map:
-    input_data[cp_map[cp]] = 1
-
-if restecg == "Normal":
-    input_data["restecg_normal"] = 1
-
-if slope == "Upsloping":
-    input_data["slope_upsloping"] = 1
-else:
-    input_data["slope_flat"] = 1
-
-if thal == "Normal":
-    input_data["thal_normal"] = 1
-else:
-    input_data["thal_reversable defect"] = 1
+for col in X.columns:
+    if X[col].dtype != "uint8" and X[col].dtype != "int64":
+        input_values[col] = st.number_input(col, value=0.0)
+    else:
+        input_values[col] = st.number_input(col, value=0)
 
 # ============================================================
 # PREDIKSI
 # ============================================================
 if st.button("🔍 Prediksi Penyakit Jantung"):
-    input_df = pd.DataFrame([input_data])
-    input_df = input_df[X.columns]
-
-    input_scaled = scaler.transform(input_df)
-    prediction = model.predict(input_scaled)[0]
+    input_df = pd.DataFrame([input_values])
+    prediction = model.predict(input_df)[0]
 
     st.subheader("📌 Hasil Prediksi")
     if prediction == 0:
