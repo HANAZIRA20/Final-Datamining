@@ -96,7 +96,7 @@ with col1:
     st.dataframe(df["num"].value_counts())
 
 with col2:
-    fig, ax = plt.subplots(figsize=(4,3))
+    fig, ax = plt.subplots(figsize=(3.5,2.5))
     df["num"].value_counts().plot(kind="bar", ax=ax)
     ax.set_xlabel("Kelas Penyakit")
     ax.set_ylabel("Jumlah")
@@ -174,7 +174,7 @@ with col1:
     st.text(classification_report(y_test, y_pred))
 
 with col2:
-    fig_cm, ax_cm = plt.subplots(figsize=(4,3))
+    fig_cm, ax_cm = plt.subplots(figsize=(3.5,2.5))
     sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax_cm)
     ax_cm.set_xlabel("Predicted")
     ax_cm.set_ylabel("Actual")
@@ -191,29 +191,26 @@ if hasattr(model, "feature_importances_"):
     importances = pd.Series(model.feature_importances_, index=X.columns)
     importances = importances.sort_values(ascending=True)
 
-    fig_imp, ax_imp = plt.subplots(figsize=(6,8))
+    fig_imp, ax_imp = plt.subplots(figsize=(5,6))
     importances.plot(kind="barh", ax=ax_imp, color="teal")
     ax_imp.set_title("Fitur Paling Berpengaruh")
     ax_imp.set_xlabel("Importance Score")
     st.pyplot(fig_imp)
-
 
 # ============================================================
 # PRECISION-RECALL CURVE
 # ============================================================
 st.subheader("📈 Precision-Recall Curve")
 
-# Probabilitas prediksi (hanya untuk model yang mendukung predict_proba)
 if hasattr(model, "predict_proba"):
     y_scores = model.predict_proba(X_test)[:, 1]
 else:
-    # fallback untuk model tanpa predict_proba
     y_scores = model.predict(X_test)
 
 precision, recall, thresholds = precision_recall_curve(y_test, y_scores)
 avg_precision = average_precision_score(y_test, y_scores)
 
-fig_pr, ax_pr = plt.subplots(figsize=(5,4))
+fig_pr, ax_pr = plt.subplots(figsize=(3.5,2.5))
 ax_pr.plot(recall, precision, color="purple", linewidth=2)
 ax_pr.set_title(f"Precision-Recall Curve (AP = {avg_precision:.2f})")
 ax_pr.set_xlabel("Recall")
@@ -222,9 +219,10 @@ ax_pr.grid(True)
 
 st.pyplot(fig_pr)
 
+st.divider()
 
 # ============================================================
-# FORM INPUT MANUAL (VERSI AWAL)
+# FORM INPUT MANUAL
 # ============================================================
 st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
 
@@ -248,7 +246,7 @@ with col2:
     thal = st.selectbox("Thalassemia", ["normal", "fixed defect", "reversable defect"])
 
 # ============================================================
-# KONVERSI INPUT KE DUMMY SESUAI X.columns
+# KONVERSI INPUT KE DUMMY
 # ============================================================
 input_data = {col: 0 for col in X.columns}
 
@@ -264,19 +262,15 @@ input_data.update({
     "exang": 1 if exang == "Ya" else 0
 })
 
-# cp
 if f"cp_{cp}" in input_data:
     input_data[f"cp_{cp}"] = 1
 
-# restecg
 if f"restecg_{restecg}" in input_data:
     input_data[f"restecg_{restecg}"] = 1
 
-# slope
 if f"slope_{slope}" in input_data:
     input_data[f"slope_{slope}"] = 1
 
-# thal
 if f"thal_{thal}" in input_data:
     input_data[f"thal_{thal}"] = 1
 
@@ -301,6 +295,3 @@ st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
-
-
-
