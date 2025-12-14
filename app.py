@@ -109,6 +109,10 @@ df_proc = pd.get_dummies(df_proc, drop_first=True)
 X = df_proc.drop(columns=["num"])
 y = df_proc["num"]
 
+# ✅ Tampilkan kolom fitur untuk debugging
+st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
+st.write(list(X.columns))
+
 st.success("✅ Preprocessing selesai")
 st.divider()
 
@@ -240,7 +244,7 @@ with col2:
     thal = st.selectbox("Thalassemia", ["normal", "fixed defect", "reversable defect"])
 
 # ============================================================
-# KONVERSI INPUT KE DUMMY (FIX TANPA ERROR)
+# KONVERSI INPUT KE DUMMY (ANTI ERROR)
 # ============================================================
 input_data = {col: 0 for col in X.columns}
 
