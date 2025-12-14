@@ -160,7 +160,7 @@ st.divider()
 # FORM INPUT PASIEN (USER FRIENDLY)
 # ============================================================
 st.subheader("🧑‍⚕️ 5. Prediksi Penyakit Jantung Pasien")
-st.markdown("Masukkan data pasien berikut:")
+st.markdown("Masukkan data pasien:")
 
 col1, col2 = st.columns(2)
 
@@ -182,7 +182,7 @@ with col2:
     thal = st.selectbox("Thalassemia", ["Normal", "Fixed Defect", "Reversable Defect"])
 
 # ============================================================
-# KONVERSI INPUT → ONE HOT
+# KONVERSI INPUT → ONE HOT (AMAN)
 # ============================================================
 input_data = {col: 0 for col in X.columns}
 
@@ -226,10 +226,14 @@ if thal in thal_map:
     input_data[thal_map[thal]] = 1
 
 # ============================================================
-# PREDIKSI
+# PREDIKSI (FIX ERROR KOLOM)
 # ============================================================
 if st.button("🔍 Prediksi Penyakit Jantung"):
     input_df = pd.DataFrame([input_data])
+
+    # 🔥 BARIS PALING PENTING (ANTI ERROR)
+    input_df = input_df[X.columns]
+
     input_scaled = scaler.transform(input_df)
     prediction = model.predict(input_scaled)[0]
 
