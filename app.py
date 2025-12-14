@@ -142,12 +142,7 @@ st.markdown("**Rasio:** 80% Training – 20% Testing")
 st.divider()
 
 # ============================================================
-# NORMALISASI (HANYA UNTUK MODEL YANG BUTUH)
-# ============================================================
-scaler = None
-
-# ============================================================
-# SIDEBAR MODEL
+# MODEL SELECTION
 # ============================================================
 st.sidebar.header("⚙️ Pengaturan Model")
 
@@ -156,9 +151,6 @@ model_choice = st.sidebar.selectbox(
     ["Decision Tree", "Random Forest"]
 )
 
-# ============================================================
-# TRAIN MODEL
-# ============================================================
 if model_choice == "Decision Tree":
     model = DecisionTreeClassifier(random_state=42)
 else:
@@ -190,23 +182,67 @@ with col2:
 st.divider()
 
 # ============================================================
-# AUTO UI INPUT
+# FORM INPUT MANUAL (VERSI AWAL)
 # ============================================================
 st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
 
-input_values = {}
+col1, col2 = st.columns(2)
 
-for col in X.columns:
-    if X[col].dtype != "uint8" and X[col].dtype != "int64":
-        input_values[col] = st.number_input(col, value=0.0)
-    else:
-        input_values[col] = st.number_input(col, value=0)
+with col1:
+    age = st.number_input("Usia", 1, 100, 50)
+    trestbps = st.number_input("Tekanan Darah Istirahat", 80, 200, 130)
+    chol = st.number_input("Kolesterol", 100, 400, 220)
+    thalach = st.number_input("Detak Jantung Maksimum", 60, 220, 150)
+    oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
+    ca = st.selectbox("Jumlah Pembuluh Darah Tersumbat", [0, 1, 2, 3])
+
+with col2:
+    sex = st.selectbox("Jenis Kelamin", ["Perempuan", "Laki-laki"])
+    fbs = st.selectbox("Gula Darah Puasa > 120 mg/dL?", ["Tidak", "Ya"])
+    exang = st.selectbox("Nyeri Dada Saat Olahraga?", ["Tidak", "Ya"])
+    cp = st.selectbox("Tipe Nyeri Dada", ["typical angina", "atypical angina", "non-anginal", "asymptomatic"])
+    restecg = st.selectbox("Hasil ECG", ["normal", "lv hypertrophy", "st-t abnormality"])
+    slope = st.selectbox("Slope ST Segment", ["upsloping", "flat", "downsloping"])
+    thal = st.selectbox("Thalassemia", ["normal", "fixed defect", "reversable defect"])
+
+# ============================================================
+# KONVERSI INPUT KE DUMMY SESUAI X.columns
+# ============================================================
+input_data = {col: 0 for col in X.columns}
+
+input_data.update({
+    "age": age,
+    "trestbps": trestbps,
+    "chol": chol,
+    "thalach": thalach,
+    "oldpeak": oldpeak,
+    "ca": ca,
+    "sex_Male": 1 if sex == "Laki-laki" else 0,
+    "fbs": 1 if fbs == "Ya" else 0,
+    "exang": 1 if exang == "Ya" else 0
+})
+
+# cp
+if f"cp_{cp}" in input_data:
+    input_data[f"cp_{cp}"] = 1
+
+# restecg
+if f"restecg_{restecg}" in input_data:
+    input_data[f"restecg_{restecg}"] = 1
+
+# slope
+if f"slope_{slope}" in input_data:
+    input_data[f"slope_{slope}"] = 1
+
+# thal
+if f"thal_{thal}" in input_data:
+    input_data[f"thal_{thal}"] = 1
 
 # ============================================================
 # PREDIKSI
 # ============================================================
 if st.button("🔍 Prediksi Penyakit Jantung"):
-    input_df = pd.DataFrame([input_values])
+    input_df = pd.DataFrame([input_data])
     prediction = model.predict(input_df)[0]
 
     st.subheader("📌 Hasil Prediksi")
