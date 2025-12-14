@@ -275,17 +275,43 @@ if f"thal_{thal}" in input_data:
     input_data[f"thal_{thal}"] = 1
 
 # ============================================================
-# PREDIKSI
+# KONVERSI INPUT KE DUMMY SESUAI X.columns (VERSI FIX)
 # ============================================================
-if st.button("🔍 Prediksi Penyakit Jantung"):
-    input_df = pd.DataFrame([input_data])
-    prediction = model.predict(input_df)[0]
+input_data = {col: 0 for col in X.columns}
 
-    st.subheader("📌 Hasil Prediksi")
-    if prediction == 0:
-        st.success("✅ Pasien **TIDAK terdeteksi penyakit jantung**")
-    else:
-        st.error("⚠️ Pasien **TERDETEKSI penyakit jantung**")
+# Isi fitur numerik
+input_data["age"] = age
+input_data["trestbps"] = trestbps
+input_data["chol"] = chol
+input_data["thalach"] = thalach
+input_data["oldpeak"] = oldpeak
+input_data["ca"] = ca
+
+# Fitur biner
+input_data["sex_Male"] = 1 if sex == "Laki-laki" else 0
+input_data["fbs"] = 1 if fbs == "Ya" else 0
+input_data["exang"] = 1 if exang == "Ya" else 0
+
+# Fitur kategori (dummy)
+# cp
+colname = f"cp_{cp}"
+if colname in input_data:
+    input_data[colname] = 1
+
+# restecg
+colname = f"restecg_{restecg}"
+if colname in input_data:
+    input_data[colname] = 1
+
+# slope
+colname = f"slope_{slope}"
+if colname in input_data:
+    input_data[colname] = 1
+
+# thal
+colname = f"thal_{thal}"
+if colname in input_data:
+    input_data[colname] = 1
 
 # ============================================================
 # FOOTER
@@ -295,3 +321,4 @@ st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
+
