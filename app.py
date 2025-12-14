@@ -13,6 +13,7 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 
 # ============================================================
@@ -28,11 +29,11 @@ st.set_page_config(
 # HEADER
 # ============================================================
 st.markdown("<h1 style='text-align:center;'>❤️ Heart Disease Classification</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>Random Forest | Data Mining Project</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Decision Tree & Random Forest | Data Mining Project</p>", unsafe_allow_html=True)
 st.divider()
 
 # ============================================================
-# LOAD DATASET
+# LOAD DATASET (AUTO)
 # ============================================================
 DATA_PATH = "heart_disease_uci.csv"
 
@@ -71,12 +72,11 @@ st.divider()
 st.subheader("🎯 2. Target Variable")
 
 st.markdown("""
-Kolom target yang digunakan adalah **`num`** dengan keterangan:
-
+Kolom target yang digunakan adalah **num** dengan keterangan:
 - **0** → Tidak memiliki penyakit jantung  
 - **1 – 4** → Memiliki penyakit jantung  
 
-Model digunakan untuk memprediksi **ada atau tidaknya penyakit jantung**.
+Model digunakan untuk **memprediksi apakah pasien memiliki penyakit jantung atau tidak**.
 """)
 
 col1, col2 = st.columns(2)
@@ -88,7 +88,7 @@ with col1:
 with col2:
     fig, ax = plt.subplots(figsize=(4,3))
     df["num"].value_counts().sort_index().plot(kind="bar", ax=ax)
-    ax.set_xlabel("Kelas")
+    ax.set_xlabel("Kelas Penyakit")
     ax.set_ylabel("Jumlah")
     st.pyplot(fig)
 
@@ -122,16 +122,14 @@ X_train, X_test, y_train, y_test = train_test_split(
 st.subheader("📂 4. Pembagian Data")
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Total Data", df_proc.shape[0])
-col2.metric("Data Training", X_train.shape[0])
-col3.metric("Data Testing", X_test.shape[0])
+with col1:
+    st.metric("Total Data", df_proc.shape[0])
+with col2:
+    st.metric("Data Training", X_train.shape[0])
+with col3:
+    st.metric("Data Testing", X_test.shape[0])
 
-st.markdown("""
-- Rasio pembagian data **80% Training – 20% Testing**
-- Training data digunakan untuk melatih model
-- Testing data digunakan untuk evaluasi performa
-""")
-
+st.markdown("**Rasio:** 80% Training – 20% Testing")
 st.divider()
 
 # ============================================================
@@ -142,31 +140,50 @@ X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
 # ============================================================
-# TRAIN MODEL (BEST MODEL)
+# SIDEBAR MODEL (TANPA TREE SLIDER)
 # ============================================================
-st.subheader("🤖 5. Model Training (Random Forest)")
+st.sidebar.header("⚙️ Pengaturan Model")
 
-model = RandomForestClassifier(random_state=42)
+model_choice = st.sidebar.selectbox(
+    "Pilih Model",
+    ["Decision Tree", "Random Forest"]
+)
+
+# ============================================================
+# TRAIN MODEL
+# ============================================================
+if model_choice == "Decision Tree":
+    model = DecisionTreeClassifier(random_state=42)
+else:
+    model = RandomForestClassifier(random_state=42)
+
 model.fit(X_train, y_train)
-
 y_pred = model.predict(X_test)
 acc = accuracy_score(y_test, y_pred)
 
-st.metric("Accuracy", f"{acc:.2f}")
+# ============================================================
+# EVALUASI MODEL
+# ============================================================
+st.subheader("🤖 5. Evaluasi Model")
 
-st.text("Classification Report")
-st.text(classification_report(y_test, y_pred))
+col1, col2 = st.columns(2)
 
-fig_cm, ax_cm = plt.subplots(figsize=(4,3))
-sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax_cm)
-ax_cm.set_xlabel("Predicted")
-ax_cm.set_ylabel("Actual")
-st.pyplot(fig_cm)
+with col1:
+    st.metric("Accuracy", f"{acc:.2f}")
+    st.text("Classification Report")
+    st.text(classification_report(y_test, y_pred))
+
+with col2:
+    fig_cm, ax_cm = plt.subplots(figsize=(4,3))
+    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax_cm)
+    ax_cm.set_xlabel("Predicted")
+    ax_cm.set_ylabel("Actual")
+    st.pyplot(fig_cm)
 
 st.divider()
 
 # ============================================================
-# FORM PREDIKSI PASIEN
+# FORM INPUT PASIEN
 # ============================================================
 st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
 
@@ -178,14 +195,15 @@ with col1:
     chol = st.number_input("Kolesterol", 100, 400, 220)
     thalach = st.number_input("Detak Jantung Maksimum", 60, 220, 150)
     oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
-    ca = st.selectbox("Jumlah Pembuluh Tersumbat", [0, 1, 2, 3])
+    ca = st.selectbox("Jumlah Pembuluh Darah Tersumbat", [0, 1, 2, 3])
 
 with col2:
     sex = st.selectbox("Jenis Kelamin", ["Perempuan", "Laki-laki"])
     fbs = st.selectbox("Gula Darah Puasa > 120 mg/dL?", ["Tidak", "Ya"])
     exang = st.selectbox("Nyeri Dada Saat Olahraga?", ["Tidak", "Ya"])
-    cp = st.selectbox("Tipe Nyeri Dada", ["Typical", "Atypical", "Non-anginal"])
-    slope = st.selectbox("Slope ST", ["Upsloping", "Flat"])
+    cp = st.selectbox("Tipe Nyeri Dada", ["Typical", "Atypical", "Non-anginal", "Asymptomatic"])
+    restecg = st.selectbox("Hasil ECG", ["Normal", "ST-T Abnormality"])
+    slope = st.selectbox("Slope ST Segment", ["Upsloping", "Flat"])
     thal = st.selectbox("Thalassemia", ["Normal", "Reversable Defect"])
 
 # ============================================================
@@ -212,8 +230,18 @@ cp_map = {
 if cp in cp_map:
     input_data[cp_map[cp]] = 1
 
-input_data["slope_upsloping" if slope == "Upsloping" else "slope_flat"] = 1
-input_data["thal_normal" if thal == "Normal" else "thal_reversable defect"] = 1
+if restecg == "Normal":
+    input_data["restecg_normal"] = 1
+
+if slope == "Upsloping":
+    input_data["slope_upsloping"] = 1
+else:
+    input_data["slope_flat"] = 1
+
+if thal == "Normal":
+    input_data["thal_normal"] = 1
+else:
+    input_data["thal_reversable defect"] = 1
 
 # ============================================================
 # PREDIKSI
@@ -225,10 +253,11 @@ if st.button("🔍 Prediksi Penyakit Jantung"):
     input_scaled = scaler.transform(input_df)
     prediction = model.predict(input_scaled)[0]
 
+    st.subheader("📌 Hasil Prediksi")
     if prediction == 0:
-        st.success("✅ Pasien TIDAK terdeteksi penyakit jantung")
+        st.success("✅ Pasien **TIDAK terdeteksi penyakit jantung**")
     else:
-        st.error("⚠️ Pasien TERDETEKSI penyakit jantung")
+        st.error("⚠️ Pasien **TERDETEKSI penyakit jantung**")
 
 # ============================================================
 # FOOTER
