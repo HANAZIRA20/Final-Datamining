@@ -4,6 +4,7 @@
 import warnings
 warnings.filterwarnings('ignore')
 
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -18,43 +19,69 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 
 # ============================================================
-# STREAMLIT CONFIG
+# PAGE CONFIG
 # ============================================================
 st.set_page_config(
     page_title="Heart Disease Classification",
+    page_icon="❤️",
     layout="wide"
 )
 
-st.title("💓 Heart Disease Classification App")
-st.write("Klasifikasi Penyakit Jantung menggunakan Decision Tree & Random Forest")
+# ============================================================
+# HEADER
+# ============================================================
+st.markdown(
+    "<h1 style='text-align:center;'>❤️ Heart Disease Classification App</h1>",
+    unsafe_allow_html=True
+)
+st.markdown(
+    "<p style='text-align:center;'>Decision Tree & Random Forest | Data Mining Project</p>",
+    unsafe_allow_html=True
+)
+
+st.divider()
 
 # ============================================================
-# LOAD DATASET
+# SIDEBAR – DATASET
 # ============================================================
 st.sidebar.header("📂 Dataset")
 
 uploaded_file = st.sidebar.file_uploader(
-    "Upload file CSV", type=["csv"]
+    "Upload dataset (CSV)", type=["csv"]
 )
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    st.success("Dataset berhasil diupload!")
+    st.sidebar.success("Dataset berhasil diupload")
 else:
-    st.info("Menggunakan dataset default")
-    df = pd.read_csv("heart_disease_uci.csv")
+    if os.path.exists("heart_disease_uci.csv"):
+        df = pd.read_csv("heart_disease_uci.csv")
+        st.sidebar.info("Menggunakan dataset default")
+    else:
+        st.error("Dataset tidak ditemukan. Silakan upload file CSV.")
+        st.stop()
 
 # ============================================================
-# PREVIEW DATA
+# SECTION 1 – DATA OVERVIEW
 # ============================================================
-st.subheader("📊 Preview Dataset")
-st.dataframe(df.head())
+st.subheader("📊 1. Data Overview")
 
-st.subheader("ℹ️ Info Dataset")
-st.text(df.info())
+col1, col2 = st.columns(2)
 
-st.subheader("❓ Missing Value per Kolom")
-st.write(df.isnull().sum())
+with col1:
+    st.write("**5 Data Teratas**")
+    st.dataframe(df.head())
+
+with col2:
+    st.write("**Informasi Dataset**")
+    buffer = []
+    df.info(buf=buffer)
+    st.text("\n".join(buffer))
+
+st.write("**Missing Value per Kolom**")
+st.dataframe(df.isnull().sum())
+
+st.divider()
 
 # ============================================================
 # TARGET COLUMN
@@ -64,54 +91,62 @@ if 'num' not in df.columns:
     st.stop()
 
 target_col = 'num'
-st.success(f"Target terdeteksi: {target_col}")
+st.success("Target terdeteksi: kolom 'num'")
 
 # ============================================================
-# EDA – DISTRIBUSI TARGET
+# SECTION 2 – EDA
 # ============================================================
-st.subheader("📈 Distribusi Target")
+st.subheader("📈 2. Exploratory Data Analysis (EDA)")
 
-fig, ax = plt.subplots()
-df[target_col].value_counts().sort_index().plot(kind='bar', ax=ax)
-ax.set_xlabel("Kelas Penyakit Jantung")
-ax.set_ylabel("Jumlah")
-st.pyplot(fig)
+col1, col2 = st.columns(2)
+
+with col1:
+    st.write("**Distribusi Kelas Target**")
+    fig, ax = plt.subplots()
+    df[target_col].value_counts().sort_index().plot(kind='bar', ax=ax)
+    ax.set_xlabel("Kelas Penyakit Jantung")
+    ax.set_ylabel("Jumlah")
+    st.pyplot(fig)
+
+with col2:
+    st.write("**Correlation Heatmap (Numerik)**")
+    numeric_df = df.select_dtypes(include=['int64', 'float64'])
+    fig, ax = plt.subplots(figsize=(6,4))
+    sns.heatmap(numeric_df.corr(), cmap='coolwarm', ax=ax)
+    st.pyplot(fig)
+
+st.divider()
 
 # ============================================================
-# HEATMAP KORELASI
+# SECTION 3 – PREPROCESSING
 # ============================================================
-st.subheader("🔥 Correlation Heatmap (Numeric Only)")
+st.subheader("⚙️ 3. Preprocessing")
 
-numeric_df = df.select_dtypes(include=['int64', 'float64'])
+df_proc = df.copy()
 
-fig, ax = plt.subplots(figsize=(10, 6))
-sns.heatmap(numeric_df.corr(), cmap='coolwarm', ax=ax)
-st.pyplot(fig)
+df_proc = df_proc.drop(columns=['id', 'dataset'], errors='ignore')
 
-# ============================================================
-# PREPROCESSING
-# ============================================================
-st.subheader("⚙️ Preprocessing Data")
-
-# Drop kolom yang tidak perlu
-df = df.drop(columns=['id', 'dataset'], errors='ignore')
-
-# Encode TRUE / FALSE ke 1 / 0
-df = df.replace({
+df_proc = df_proc.replace({
     'TRUE': 1, 'FALSE': 0,
     True: 1, False: 0
 })
 
-# One-hot encoding
-df = pd.get_dummies(df, drop_first=True)
+df_proc = pd.get_dummies(df_proc, drop_first=True)
 
-st.write("Jumlah kolom setelah encoding:", df.shape[1])
+st.write("**Dataset setelah preprocessing**")
+st.dataframe(df_proc.head())
+
+st.info(f"Total fitur setelah encoding: {df_proc.shape[1]}")
+
+st.divider()
 
 # ============================================================
-# SPLIT DATA
+# SECTION 4 – SPLIT DATA
 # ============================================================
-X = df.drop(columns=[target_col])
-y = df[target_col]
+st.subheader("🔀 4. Data Splitting & Scaling")
+
+X = df_proc.drop(columns=[target_col])
+y = df_proc[target_col]
 
 test_size = st.sidebar.slider("Test Size", 0.1, 0.4, 0.2)
 
@@ -122,38 +157,42 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
-# ============================================================
-# NORMALISASI
-# ============================================================
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
-st.success("Preprocessing selesai!")
+st.success("Data berhasil di-split & dinormalisasi")
+
+st.write("Ukuran Data:")
+st.write({
+    "X_train": X_train.shape,
+    "X_test": X_test.shape,
+    "y_train": y_train.shape,
+    "y_test": y_test.shape
+})
+
+st.divider()
 
 # ============================================================
-# MODEL SELECTION
+# SECTION 5 – MODEL TRAINING
 # ============================================================
-st.sidebar.header("🤖 Model")
+st.subheader("🤖 5. Model Training & Evaluation")
 
 model_choice = st.sidebar.selectbox(
     "Pilih Model",
     ["Decision Tree", "Random Forest"]
 )
 
-# ============================================================
-# TRAIN MODEL
-# ============================================================
-if st.sidebar.button("🚀 Train Model"):
+if model_choice == "Random Forest":
+    n_estimators = st.sidebar.slider("Jumlah Trees", 50, 300, 200)
+
+train_btn = st.sidebar.button("🚀 Train Model")
+
+if train_btn:
 
     if model_choice == "Decision Tree":
         model = DecisionTreeClassifier(random_state=42)
-
     else:
-        n_estimators = st.sidebar.slider(
-            "Jumlah Trees (Random Forest)",
-            50, 300, 200
-        )
         model = RandomForestClassifier(
             n_estimators=n_estimators,
             random_state=42
@@ -162,28 +201,40 @@ if st.sidebar.button("🚀 Train Model"):
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
-    # ========================================================
-    # EVALUATION
-    # ========================================================
-    st.subheader("📌 Hasil Evaluasi Model")
-
     acc = accuracy_score(y_test, y_pred)
-    st.metric("Accuracy", f"{acc:.2f}")
 
-    st.subheader("📄 Classification Report")
-    st.text(classification_report(y_test, y_pred))
+    st.metric("🎯 Accuracy", f"{acc:.2f}")
 
-    st.subheader("📊 Confusion Matrix")
-    fig, ax = plt.subplots()
-    sns.heatmap(
-        confusion_matrix(y_test, y_pred),
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        ax=ax
-    )
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("Actual")
-    st.pyplot(fig)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("**Classification Report**")
+        st.text(classification_report(y_test, y_pred))
+
+    with col2:
+        st.write("**Confusion Matrix**")
+        fig, ax = plt.subplots()
+        sns.heatmap(
+            confusion_matrix(y_test, y_pred),
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            ax=ax
+        )
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Actual")
+        st.pyplot(fig)
 
     st.success("Training & evaluasi selesai ✅")
+
+else:
+    st.info("Klik **Train Model** untuk melihat hasil prediksi")
+
+# ============================================================
+# FOOTER
+# ============================================================
+st.divider()
+st.markdown(
+    "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit App</p>",
+    unsafe_allow_html=True
+)
