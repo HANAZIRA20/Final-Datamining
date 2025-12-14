@@ -190,11 +190,11 @@ with col2:
     st.pyplot(fig_cm)
 
 st.markdown("""
-### 📘 Penjelasan Confusion Matrix + Warna
-- **TP (True Positive)** → Model benar memprediksi pasien **sakit** (biasanya warna biru tua)
-- **TN (True Negative)** → Model benar memprediksi pasien **sehat** (biru muda)
-- **FP (False Positive)** → Model salah memprediksi pasien sehat sebagai sakit (sering terlihat lebih terang)
-- **FN (False Negative)** → Model salah memprediksi pasien sakit sebagai sehat (warna terang, sangat penting di medis)
+### 📘 Penjelasan Confusion Matrix
+- **TP (True Positive)** → Model benar memprediksi pasien **sakit** 
+- **TN (True Negative)** → Model benar memprediksi pasien **sehat** 
+- **FP (False Positive)** → Model salah memprediksi pasien sehat sebagai sakit 
+- **FN (False Negative)** → Model salah memprediksi pasien sakit sebagai sehat 
 - **FN paling kritis**, karena pasien sakit bisa tidak terdeteksi.
 """)
 
@@ -353,3 +353,4 @@ st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
+
