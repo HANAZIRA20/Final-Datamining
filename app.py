@@ -182,6 +182,21 @@ with col2:
 st.divider()
 
 # ============================================================
+# FEATURE IMPORTANCE
+# ============================================================
+if hasattr(model, "feature_importances_"):
+    st.subheader("📌 Feature Importance")
+
+    importances = pd.Series(model.feature_importances_, index=X.columns)
+    importances = importances.sort_values(ascending=True)
+
+    fig_imp, ax_imp = plt.subplots(figsize=(6,8))
+    importances.plot(kind="barh", ax=ax_imp, color="teal")
+    ax_imp.set_title("Fitur Paling Berpengaruh")
+    ax_imp.set_xlabel("Importance Score")
+    st.pyplot(fig_imp)
+
+# ============================================================
 # FORM INPUT MANUAL (VERSI AWAL)
 # ============================================================
 st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
@@ -259,3 +274,4 @@ st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
+
