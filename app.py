@@ -89,7 +89,7 @@ with col1:
     st.dataframe(df["num"].value_counts())
 
 with col2:
-    fig, ax = plt.subplots(figsize=(3.5,2.5))
+    fig, ax = plt.subplots(figsize=(3,2))
     df["num"].value_counts().plot(kind="bar", ax=ax)
     ax.set_xlabel("Kelas Penyakit")
     ax.set_ylabel("Jumlah")
@@ -109,7 +109,7 @@ df_proc = pd.get_dummies(df_proc, drop_first=True)
 X = df_proc.drop(columns=["num"])
 y = df_proc["num"]
 
-# Tampilkan fitur untuk memastikan
+# tampilkan fitur
 st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
 st.write(list(X.columns))
 
@@ -170,7 +170,7 @@ with col1:
     st.text(classification_report(y_test, y_pred))
 
 with col2:
-    fig_cm, ax_cm = plt.subplots(figsize=(3.5,2.5))
+    fig_cm, ax_cm = plt.subplots(figsize=(3,2))
     sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt="d", cmap="Blues", ax=ax_cm)
     ax_cm.set_xlabel("Predicted")
     ax_cm.set_ylabel("Actual")
@@ -179,24 +179,37 @@ with col2:
 st.divider()
 
 # ============================================================
-# FEATURE IMPORTANCE
+# FEATURE IMPORTANCE (GRAFIK + PENJELASAN DI SAMPING)
 # ============================================================
 if hasattr(model, "feature_importances_"):
     st.subheader("📌 Feature Importance")
 
-    importances = pd.Series(model.feature_importances_, index=X.columns)
-    importances = importances.sort_values(ascending=True)
+    colA, colB = st.columns([1,1])
 
-    fig_imp, ax_imp = plt.subplots(figsize=(5,6))
-    importances.plot(kind="barh", ax=ax_imp, color="teal")
-    ax_imp.set_title("Fitur Paling Berpengaruh")
-    ax_imp.set_xlabel("Importance Score")
-    st.pyplot(fig_imp)
+    with colA:
+        importances = pd.Series(model.feature_importances_, index=X.columns)
+        importances = importances.sort_values(ascending=True)
+
+        fig_imp, ax_imp = plt.subplots(figsize=(3,4))
+        importances.plot(kind="barh", ax=ax_imp, color="teal")
+        ax_imp.set_title("Feature Importance")
+        st.pyplot(fig_imp)
+
+    with colB:
+        st.markdown("""
+        ### 📘 Penjelasan Feature Importance
+        - Grafik ini menunjukkan **fitur mana yang paling berpengaruh** dalam prediksi.
+        - Semakin panjang batangnya → semakin besar kontribusinya.
+        - Model Decision Tree / Random Forest menghitung pentingnya fitur berdasarkan:
+          - Seberapa sering fitur digunakan untuk split
+          - Seberapa besar fitur mengurangi impurity
+        - Fitur dengan skor tinggi layak dipertimbangkan sebagai indikator kuat penyakit jantung.
+        """)
 
 st.divider()
 
 # ============================================================
-# PRECISION-RECALL CURVE
+# PRECISION-RECALL CURVE (GRAFIK + PENJELASAN DI SAMPING)
 # ============================================================
 st.subheader("📈 Precision-Recall Curve")
 
@@ -208,14 +221,28 @@ else:
 precision, recall, thresholds = precision_recall_curve(y_test, y_scores)
 avg_precision = average_precision_score(y_test, y_scores)
 
-fig_pr, ax_pr = plt.subplots(figsize=(3.5,2.5))
-ax_pr.plot(recall, precision, color="purple", linewidth=2)
-ax_pr.set_title(f"Precision-Recall Curve (AP = {avg_precision:.2f})")
-ax_pr.set_xlabel("Recall")
-ax_pr.set_ylabel("Precision")
-ax_pr.grid(True)
+colP, colQ = st.columns([1,1])
 
-st.pyplot(fig_pr)
+with colP:
+    fig_pr, ax_pr = plt.subplots(figsize=(3,3))
+    ax_pr.plot(recall, precision, color="purple", linewidth=2)
+    ax_pr.set_title(f"PR Curve (AP = {avg_precision:.2f})")
+    ax_pr.set_xlabel("Recall")
+    ax_pr.set_ylabel("Precision")
+    ax_pr.grid(True)
+    st.pyplot(fig_pr)
+
+with colQ:
+    st.markdown("""
+    ### 📘 Penjelasan Precision‑Recall Curve
+    - Grafik ini cocok untuk dataset **imbalanced**.
+    - **Precision**: seberapa akurat model saat memprediksi positif.
+    - **Recall**: seberapa banyak kasus positif yang berhasil ditemukan.
+    - **AP (Average Precision)** merangkum performa model:
+      - AP mendekati 1 → model sangat baik
+      - AP mendekati 0.5 → model biasa saja
+    - PR Curve lebih informatif dibanding ROC untuk kasus medis.
+    """)
 
 st.divider()
 
@@ -230,8 +257,6 @@ with col1:
     age = st.number_input("Usia", 1, 100, 50)
     trestbps = st.number_input("Tekanan Darah Istirahat", 80, 200, 130)
     chol = st.number_input("Kolesterol", 100, 400, 220)
-    # di dataset: 'thalch' → tapi di fitur: 'thalch' TIDAK ADA, yang ada 'thalch'? 
-    # dari X.columns kamu: ada 'thalch'
     thalch = st.number_input("Detak Jantung Maksimum (thalch)", 60, 220, 150)
     oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
     ca = st.selectbox("Jumlah Pembuluh Darah Tersumbat", [0, 1, 2, 3])
@@ -241,40 +266,32 @@ with col2:
     fbs = st.selectbox("Gula Darah Puasa > 120 mg/dL?", ["Tidak", "Ya"])
     exang = st.selectbox("Nyeri Dada Saat Olahraga?", ["Tidak", "Ya"])
 
-    # ✅ Sesuaikan dengan dummy yang ADA:
-    # cp_atypical angina, cp_non-anginal, cp_typical angina
     cp = st.selectbox("Tipe Nyeri Dada", [
         "typical angina",
         "atypical angina",
         "non-anginal"
     ])
 
-    # ✅ Sesuaikan dengan dummy yang ADA:
-    # restecg_normal, restecg_st-t abnormality
     restecg = st.selectbox("Hasil ECG", [
         "normal",
         "st-t abnormality"
     ])
 
-    # slope_flat, slope_upsloping (tidak ada downsloping di fitur)
     slope = st.selectbox("Slope ST Segment", [
         "flat",
         "upsloping"
     ])
 
-    # ✅ Sesuaikan dengan dummy yang ADA:
-    # thal_normal, thal_reversable defect
     thal = st.selectbox("Thalassemia", [
         "normal",
         "reversable defect"
     ])
 
 # ============================================================
-# KONVERSI INPUT KE DUMMY (SINKRON DENGAN X.columns)
+# KONVERSI INPUT KE DUMMY
 # ============================================================
 input_data = {col: 0 for col in X.columns}
 
-# numeric
 input_data["age"] = age
 input_data["trestbps"] = trestbps
 input_data["chol"] = chol
@@ -283,31 +300,17 @@ input_data["thalch"] = thalch
 input_data["exang"] = 1 if exang == "Ya" else 0
 input_data["oldpeak"] = oldpeak
 input_data["ca"] = ca
-
-# binary
 input_data["sex_Male"] = 1 if sex == "Laki-laki" else 0
 
-# categorical dummies – HARUS COCOK DENGAN NAMA FITUR
-
-# cp
-cp_col = f"cp_{cp}"
-if cp_col in input_data:
-    input_data[cp_col] = 1
-
-# restecg
-restecg_col = f"restecg_{restecg}"
-if restecg_col in input_data:
-    input_data[restecg_col] = 1
-
-# slope
-slope_col = f"slope_{slope}"
-if slope_col in input_data:
-    input_data[slope_col] = 1
-
-# thal
-thal_col = f"thal_{thal}"
-if thal_col in input_data:
-    input_data[thal_col] = 1
+for feature, value in {
+    "cp": cp,
+    "restecg": restecg,
+    "slope": slope,
+    "thal": thal
+}.items():
+    colname = f"{feature}_{value}"
+    if colname in input_data:
+        input_data[colname] = 1
 
 # ============================================================
 # PREDIKSI
