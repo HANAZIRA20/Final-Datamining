@@ -156,3 +156,157 @@ st.markdown("""
 """)
 
 st.divider()
+
+# ============================================================
+# FEATURE IMPORTANCE
+# ============================================================
+if hasattr(model, "feature_importances_"):
+    st.subheader("📌 Feature Importance")
+
+    colA, colB = st.columns([1,1])
+
+    with colA:
+        importances = pd.Series(model.feature_importances_, index=X.columns)
+        importances = importances.sort_values(ascending=True)
+
+        fig_imp, ax_imp = plt.subplots(figsize=(3,4))
+        importances.plot(kind="barh", ax=ax_imp, color="teal")
+        ax_imp.set_title("Feature Importance")
+        st.pyplot(fig_imp)
+
+    with colB:
+        st.markdown("""
+        ### 📘 Penjelasan Feature Importance
+        - Menunjukkan fitur mana yang paling berpengaruh.
+        - Semakin panjang batang → semakin besar kontribusi fitur.
+        - Model pohon (Decision Tree / Random Forest) menghitung pentingnya fitur berdasarkan:
+          - Seberapa sering fitur digunakan untuk split
+          - Seberapa besar fitur mengurangi impurity
+        """)
+
+st.divider()
+
+# ============================================================
+# PRECISION-RECALL CURVE
+# ============================================================
+st.subheader("📈 Precision-Recall Curve")
+
+if hasattr(model, "predict_proba"):
+    y_scores = model.predict_proba(X_test)[:, 1]
+else:
+    y_scores = model.predict(X_test)
+
+precision, recall, thresholds = precision_recall_curve(y_test, y_scores)
+avg_precision = average_precision_score(y_test, y_scores)
+
+colP, colQ = st.columns([1,1])
+
+with colP:
+    fig_pr, ax_pr = plt.subplots(figsize=(3,3))
+    ax_pr.plot(recall, precision, color="purple", linewidth=2)
+    ax_pr.set_title(f"PR Curve (AP = {avg_precision:.2f})")
+    ax_pr.set_xlabel("Recall")
+    ax_pr.set_ylabel("Precision")
+    ax_pr.grid(True)
+    st.pyplot(fig_pr)
+
+with colQ:
+    st.markdown("""
+    ### 📘 Penjelasan Precision‑Recall Curve
+    - Cocok untuk dataset **imbalanced**.
+    - **Precision** → Akurasi prediksi positif.
+    - **Recall** → Kemampuan menemukan kasus positif.
+    - **AP (Average Precision)**:
+      - Mendekati 1 → model sangat baik
+      - Mendekati 0.5 → model biasa saja
+    """)
+
+st.divider()
+
+# ============================================================
+# FORM INPUT MANUAL
+# ============================================================
+st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    age = st.number_input("Usia", 1, 100, 50)
+    trestbps = st.number_input("Tekanan Darah Istirahat", 80, 200, 130)
+    chol = st.number_input("Kolesterol", 100, 400, 220)
+    thalch = st.number_input("Detak Jantung Maksimum (thalch)", 60, 220, 150)
+    oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
+    ca = st.selectbox("Jumlah Pembuluh Darah Tersumbat", [0, 1, 2, 3])
+
+with col2:
+    sex = st.selectbox("Jenis Kelamin", ["Perempuan", "Laki-laki"])
+    fbs = st.selectbox("Gula Darah Puasa > 120 mg/dL?", ["Tidak", "Ya"])
+    exang = st.selectbox("Nyeri Dada Saat Olahraga?", ["Tidak", "Ya"])
+
+    cp = st.selectbox("Tipe Nyeri Dada", [
+        "typical angina",
+        "atypical angina",
+        "non-anginal"
+    ])
+
+    restecg = st.selectbox("Hasil ECG", [
+        "normal",
+        "st-t abnormality"
+    ])
+
+    slope = st.selectbox("Slope ST Segment", [
+        "flat",
+        "upsloping"
+    ])
+
+    thal = st.selectbox("Thalassemia", [
+        "normal",
+        "reversable defect"
+    ])
+
+# ============================================================
+# KONVERSI INPUT KE DUMMY
+# ============================================================
+input_data = {col: 0 for col in X.columns}
+
+input_data["age"] = age
+input_data["trestbps"] = trestbps
+input_data["chol"] = chol
+input_data["fbs"] = 1 if fbs == "Ya" else 0
+input_data["thalch"] = thalch
+input_data["exang"] = 1 if exang == "Ya" else 0
+input_data["oldpeak"] = oldpeak
+input_data["ca"] = ca
+input_data["sex_Male"] = 1 if sex == "Laki-laki" else 0
+
+for feature, value in {
+    "cp": cp,
+    "restecg": restecg,
+    "slope": slope,
+    "thal": thal
+}.items():
+    colname = f"{feature}_{value}"
+    if colname in input_data:
+        input_data[colname] = 1
+
+# ============================================================
+# PREDIKSI
+# ============================================================
+if st.button("🔍 Prediksi Penyakit Jantung"):
+    input_df = pd.DataFrame([input_data])
+    prediction = model.predict(input_df)[0]
+
+    st.subheader("📌 Hasil Prediksi")
+    if prediction == 0:
+        st.success("✅ Pasien **TIDAK terdeteksi penyakit jantung**")
+    else:
+        st.error("⚠️ Pasien **TERDETEKSI penyakit jantung**")
+
+# ============================================================
+# FOOTER
+# ============================================================
+st.divider()
+st.markdown(
+    "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
+    unsafe_allow_html=True
+)
