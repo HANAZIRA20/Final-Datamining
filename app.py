@@ -42,24 +42,16 @@ st.markdown(
 st.divider()
 
 # ============================================================
-# SIDEBAR – DATASET
+# LOAD DATASET (AUTO)
 # ============================================================
-st.sidebar.header("📂 Dataset")
+DATA_PATH = "heart_disease_uci.csv"
 
-uploaded_file = st.sidebar.file_uploader(
-    "Upload dataset (CSV)", type=["csv"]
-)
+if not os.path.exists(DATA_PATH):
+    st.error("❌ File dataset 'heart_disease_uci.csv' tidak ditemukan di server.")
+    st.stop()
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    st.sidebar.success("Dataset berhasil diupload")
-else:
-    if os.path.exists("heart_disease_uci.csv"):
-        df = pd.read_csv("heart_disease_uci.csv")
-        st.sidebar.info("Menggunakan dataset default")
-    else:
-        st.error("Dataset tidak ditemukan. Silakan upload file CSV.")
-        st.stop()
+df = pd.read_csv(DATA_PATH)
+st.success("Dataset berhasil dimuat otomatis")
 
 # ============================================================
 # SECTION 1 – DATA OVERVIEW
@@ -74,9 +66,13 @@ with col1:
 
 with col2:
     st.write("**Informasi Dataset**")
-    buffer = []
-    df.info(buf=buffer)
-    st.text("\n".join(buffer))
+    info_df = pd.DataFrame({
+        "Kolom": df.columns,
+        "Tipe Data": df.dtypes.astype(str),
+        "Jumlah Non-Null": df.notnull().sum(),
+        "Jumlah Null": df.isnull().sum()
+    })
+    st.dataframe(info_df)
 
 st.write("**Missing Value per Kolom**")
 st.dataframe(df.isnull().sum())
@@ -141,7 +137,7 @@ st.info(f"Total fitur setelah encoding: {df_proc.shape[1]}")
 st.divider()
 
 # ============================================================
-# SECTION 4 – SPLIT DATA
+# SECTION 4 – SPLIT & SCALING
 # ============================================================
 st.subheader("🔀 4. Data Splitting & Scaling")
 
@@ -163,7 +159,6 @@ X_test = scaler.transform(X_test)
 
 st.success("Data berhasil di-split & dinormalisasi")
 
-st.write("Ukuran Data:")
 st.write({
     "X_train": X_train.shape,
     "X_test": X_test.shape,
@@ -174,7 +169,7 @@ st.write({
 st.divider()
 
 # ============================================================
-# SECTION 5 – MODEL TRAINING
+# SECTION 5 – MODEL TRAINING & EVALUATION
 # ============================================================
 st.subheader("🤖 5. Model Training & Evaluation")
 
@@ -184,11 +179,12 @@ model_choice = st.sidebar.selectbox(
 )
 
 if model_choice == "Random Forest":
-    n_estimators = st.sidebar.slider("Jumlah Trees", 50, 300, 200)
+    n_estimators = st.sidebar.slider(
+        "Jumlah Trees (Random Forest)",
+        50, 300, 200
+    )
 
-train_btn = st.sidebar.button("🚀 Train Model")
-
-if train_btn:
+if st.sidebar.button("🚀 Train Model"):
 
     if model_choice == "Decision Tree":
         model = DecisionTreeClassifier(random_state=42)
@@ -202,7 +198,6 @@ if train_btn:
     y_pred = model.predict(X_test)
 
     acc = accuracy_score(y_test, y_pred)
-
     st.metric("🎯 Accuracy", f"{acc:.2f}")
 
     col1, col2 = st.columns(2)
@@ -228,7 +223,7 @@ if train_btn:
     st.success("Training & evaluasi selesai ✅")
 
 else:
-    st.info("Klik **Train Model** untuk melihat hasil prediksi")
+    st.info("Klik **Train Model** di sidebar untuk melihat hasil")
 
 # ============================================================
 # FOOTER
