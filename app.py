@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.metrics import precision_recall_curve, average_precision_score
 from sklearn.tree import DecisionTreeClassifier
@@ -83,12 +82,6 @@ st.divider()
 # ============================================================
 st.subheader("🎯 2. Target Variable")
 
-st.markdown("""
-Kolom target yang digunakan adalah **num** dengan keterangan:
-- **0** → Tidak memiliki penyakit jantung  
-- **1** → Memiliki penyakit jantung  
-""")
-
 col1, col2 = st.columns(2)
 
 with col1:
@@ -139,7 +132,6 @@ with col2:
 with col3:
     st.metric("Data Testing", X_test.shape[0])
 
-st.markdown("**Rasio:** 80% Training – 20% Testing")
 st.divider()
 
 # ============================================================
@@ -197,6 +189,8 @@ if hasattr(model, "feature_importances_"):
     ax_imp.set_xlabel("Importance Score")
     st.pyplot(fig_imp)
 
+st.divider()
+
 # ============================================================
 # PRECISION-RECALL CURVE
 # ============================================================
@@ -246,40 +240,11 @@ with col2:
     thal = st.selectbox("Thalassemia", ["normal", "fixed defect", "reversable defect"])
 
 # ============================================================
-# KONVERSI INPUT KE DUMMY
+# KONVERSI INPUT KE DUMMY (FIX TANPA ERROR)
 # ============================================================
 input_data = {col: 0 for col in X.columns}
 
-input_data.update({
-    "age": age,
-    "trestbps": trestbps,
-    "chol": chol,
-    "thalach": thalach,
-    "oldpeak": oldpeak,
-    "ca": ca,
-    "sex_Male": 1 if sex == "Laki-laki" else 0,
-    "fbs": 1 if fbs == "Ya" else 0,
-    "exang": 1 if exang == "Ya" else 0
-})
-
-if f"cp_{cp}" in input_data:
-    input_data[f"cp_{cp}"] = 1
-
-if f"restecg_{restecg}" in input_data:
-    input_data[f"restecg_{restecg}"] = 1
-
-if f"slope_{slope}" in input_data:
-    input_data[f"slope_{slope}"] = 1
-
-if f"thal_{thal}" in input_data:
-    input_data[f"thal_{thal}"] = 1
-
-# ============================================================
-# KONVERSI INPUT KE DUMMY SESUAI X.columns (VERSI FIX)
-# ============================================================
-input_data = {col: 0 for col in X.columns}
-
-# Isi fitur numerik
+# numeric
 input_data["age"] = age
 input_data["trestbps"] = trestbps
 input_data["chol"] = chol
@@ -287,31 +252,34 @@ input_data["thalach"] = thalach
 input_data["oldpeak"] = oldpeak
 input_data["ca"] = ca
 
-# Fitur biner
+# binary
 input_data["sex_Male"] = 1 if sex == "Laki-laki" else 0
 input_data["fbs"] = 1 if fbs == "Ya" else 0
 input_data["exang"] = 1 if exang == "Ya" else 0
 
-# Fitur kategori (dummy)
-# cp
-colname = f"cp_{cp}"
-if colname in input_data:
-    input_data[colname] = 1
+# categorical dummies
+for feature, value in {
+    "cp": cp,
+    "restecg": restecg,
+    "slope": slope,
+    "thal": thal
+}.items():
+    colname = f"{feature}_{value}"
+    if colname in input_data:
+        input_data[colname] = 1
 
-# restecg
-colname = f"restecg_{restecg}"
-if colname in input_data:
-    input_data[colname] = 1
+# ============================================================
+# PREDIKSI
+# ============================================================
+if st.button("🔍 Prediksi Penyakit Jantung"):
+    input_df = pd.DataFrame([input_data])
+    prediction = model.predict(input_df)[0]
 
-# slope
-colname = f"slope_{slope}"
-if colname in input_data:
-    input_data[colname] = 1
-
-# thal
-colname = f"thal_{thal}"
-if colname in input_data:
-    input_data[colname] = 1
+    st.subheader("📌 Hasil Prediksi")
+    if prediction == 0:
+        st.success("✅ Pasien **TIDAK terdeteksi penyakit jantung**")
+    else:
+        st.error("⚠️ Pasien **TERDETEKSI penyakit jantung**")
 
 # ============================================================
 # FOOTER
@@ -321,4 +289,3 @@ st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
-
