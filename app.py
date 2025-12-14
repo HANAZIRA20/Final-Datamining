@@ -196,6 +196,32 @@ if hasattr(model, "feature_importances_"):
     ax_imp.set_xlabel("Importance Score")
     st.pyplot(fig_imp)
 
+
+# ============================================================
+# PRECISION-RECALL CURVE
+# ============================================================
+st.subheader("📈 Precision-Recall Curve")
+
+# Probabilitas prediksi (hanya untuk model yang mendukung predict_proba)
+if hasattr(model, "predict_proba"):
+    y_scores = model.predict_proba(X_test)[:, 1]
+else:
+    # fallback untuk model tanpa predict_proba
+    y_scores = model.predict(X_test)
+
+precision, recall, thresholds = precision_recall_curve(y_test, y_scores)
+avg_precision = average_precision_score(y_test, y_scores)
+
+fig_pr, ax_pr = plt.subplots(figsize=(5,4))
+ax_pr.plot(recall, precision, color="purple", linewidth=2)
+ax_pr.set_title(f"Precision-Recall Curve (AP = {avg_precision:.2f})")
+ax_pr.set_xlabel("Recall")
+ax_pr.set_ylabel("Precision")
+ax_pr.grid(True)
+
+st.pyplot(fig_pr)
+
+
 # ============================================================
 # FORM INPUT MANUAL (VERSI AWAL)
 # ============================================================
@@ -274,4 +300,5 @@ st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
+
 
