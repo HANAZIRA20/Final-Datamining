@@ -45,7 +45,7 @@ df = pd.read_csv(DATA_PATH)
 st.success("✅ Dataset berhasil dimuat")
 
 # ============================================================
-# DATA OVERVIEW (AMBIL YANG PENTING SAJA)
+# DATA OVERVIEW
 # ============================================================
 st.subheader("📊 1. Data Overview")
 
@@ -67,38 +67,53 @@ with col2:
 st.divider()
 
 # ============================================================
-# TARGET & EDA (RINGKAS)
+# TARGET VARIABLE
 # ============================================================
-target_col = "num"
+st.subheader("🎯 2. Target Variable")
 
-st.subheader("📈 2. Exploratory Data Analysis")
+st.markdown("""
+Kolom target yang digunakan adalah **`num`** dengan keterangan:
 
-fig, ax = plt.subplots(figsize=(4,3))
-df[target_col].value_counts().sort_index().plot(kind="bar", ax=ax)
-ax.set_xlabel("Kelas Penyakit")
-ax.set_ylabel("Jumlah")
-st.pyplot(fig)
+- **0** → Tidak memiliki penyakit jantung  
+- **1 – 4** → Memiliki penyakit jantung (tingkat keparahan berbeda)
+
+Pada aplikasi ini, model digunakan untuk **memprediksi apakah pasien
+memiliki penyakit jantung atau tidak**.
+""")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("**Distribusi Data Target**")
+    st.dataframe(df["num"].value_counts().sort_index())
+
+with col2:
+    fig, ax = plt.subplots(figsize=(4,3))
+    df["num"].value_counts().sort_index().plot(kind="bar", ax=ax)
+    ax.set_xlabel("Kelas Penyakit")
+    ax.set_ylabel("Jumlah")
+    st.pyplot(fig)
 
 st.divider()
 
 # ============================================================
 # PREPROCESSING
 # ============================================================
-st.subheader("⚙️ 3. Preprocessing")
+st.subheader("⚙️ 3. Preprocessing Data")
 
 df_proc = df.drop(columns=["id", "dataset"], errors="ignore")
 df_proc = df_proc.replace({"TRUE": 1, "FALSE": 0, True: 1, False: 0})
 df_proc = pd.get_dummies(df_proc, drop_first=True)
 
-X = df_proc.drop(columns=[target_col])
-y = df_proc[target_col]
+X = df_proc.drop(columns=["num"])
+y = df_proc["num"]
 
 st.success("✅ Preprocessing selesai")
 
 st.divider()
 
 # ============================================================
-# SPLIT & SCALING
+# SPLIT DATA
 # ============================================================
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
@@ -107,6 +122,30 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
+st.subheader("📂 4. Pembagian Data (Train & Test)")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("Total Data", df_proc.shape[0])
+
+with col2:
+    st.metric("Data Training", X_train.shape[0])
+
+with col3:
+    st.metric("Data Testing", X_test.shape[0])
+
+st.markdown("""
+- **Rasio Pembagian Data:** 80% Training – 20% Testing  
+- Data training digunakan untuk melatih model  
+- Data testing digunakan untuk evaluasi performa model
+""")
+
+st.divider()
+
+# ============================================================
+# NORMALISASI
+# ============================================================
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
@@ -137,9 +176,9 @@ y_pred = model.predict(X_test)
 acc = accuracy_score(y_test, y_pred)
 
 # ============================================================
-# EVALUATION
+# EVALUASI MODEL
 # ============================================================
-st.subheader("🤖 4. Evaluasi Model")
+st.subheader("🤖 5. Evaluasi Model")
 
 col1, col2 = st.columns(2)
 
@@ -158,9 +197,9 @@ with col2:
 st.divider()
 
 # ============================================================
-# FORM INPUT PASIEN (USER FRIENDLY & AMAN)
+# FORM INPUT PASIEN
 # ============================================================
-st.subheader("🧑‍⚕️ 5. Prediksi Penyakit Jantung")
+st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
 
 col1, col2 = st.columns(2)
 
@@ -170,19 +209,19 @@ with col1:
     chol = st.number_input("Kolesterol", 100, 400, 220)
     thalach = st.number_input("Detak Jantung Maksimum", 60, 220, 150)
     oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
-    ca = st.selectbox("Jumlah Pembuluh Tersumbat", [0, 1, 2, 3])
+    ca = st.selectbox("Jumlah Pembuluh Darah Tersumbat", [0, 1, 2, 3])
 
 with col2:
     sex = st.selectbox("Jenis Kelamin", ["Perempuan", "Laki-laki"])
-    fbs = st.selectbox("Gula Darah Puasa > 120?", ["Tidak", "Ya"])
+    fbs = st.selectbox("Gula Darah Puasa > 120 mg/dL?", ["Tidak", "Ya"])
     exang = st.selectbox("Nyeri Dada Saat Olahraga?", ["Tidak", "Ya"])
     cp = st.selectbox("Tipe Nyeri Dada", ["Typical", "Atypical", "Non-anginal", "Asymptomatic"])
     restecg = st.selectbox("Hasil ECG", ["Normal", "ST-T Abnormality"])
-    slope = st.selectbox("Slope ST", ["Upsloping", "Flat"])
+    slope = st.selectbox("Slope ST Segment", ["Upsloping", "Flat"])
     thal = st.selectbox("Thalassemia", ["Normal", "Reversable Defect"])
 
 # ============================================================
-# KONVERSI INPUT (ANTI ERROR)
+# KONVERSI INPUT
 # ============================================================
 input_data = {col: 0 for col in X.columns}
 
@@ -219,17 +258,17 @@ if thal in thal_map:
     input_data[thal_map[thal]] = 1
 
 # ============================================================
-# PREDIKSI (FIX TOTAL)
+# PREDIKSI
 # ============================================================
 if st.button("🔍 Prediksi Penyakit Jantung"):
     input_df = pd.DataFrame([input_data])
-    input_df = input_df[X.columns]  # 🔥 FIX ERROR KOLOM
+    input_df = input_df[X.columns]  # FIX ERROR KOLOM
 
     input_scaled = scaler.transform(input_df)
-    pred = model.predict(input_scaled)[0]
+    prediction = model.predict(input_scaled)[0]
 
     st.subheader("📌 Hasil Prediksi")
-    if pred == 0:
+    if prediction == 0:
         st.success("✅ Pasien **TIDAK terdeteksi penyakit jantung**")
     else:
         st.error("⚠️ Pasien **TERDETEKSI penyakit jantung**")
