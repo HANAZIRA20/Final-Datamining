@@ -20,25 +20,25 @@ from sklearn.ensemble import RandomForestClassifier
 # PAGE CONFIG
 # ============================================================
 st.set_page_config(
-    page_title="Heart Disease Classification",
-    page_icon="❤️",
+    page_title="Telco Customer Churn",
+    page_icon="📱",
     layout="wide"
 )
 
 # ============================================================
 # HEADER
 # ============================================================
-st.markdown("<h1 style='text-align:center;'>❤️ Heart Disease Classification</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>📱 Telco Customer Churn Prediction</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Decision Tree & Random Forest | Data Mining Project</p>", unsafe_allow_html=True)
 st.divider()
 
 # ============================================================
 # LOAD DATASET
 # ============================================================
-DATA_PATH = "heart_disease_uci.csv"
+DATA_PATH = "Dataset Telco-Customer-Churn.csv"
 
 if not os.path.exists(DATA_PATH):
-    st.error("❌ Dataset heart_disease_uci.csv tidak ditemukan.")
+    st.error("❌ Dataset tidak ditemukan.")
     st.stop()
 
 df = pd.read_csv(DATA_PATH)
@@ -47,11 +47,12 @@ st.success("✅ Dataset berhasil dimuat")
 # ============================================================
 # FIX TARGET → BINARY
 # ============================================================
-df["num"] = df["num"].apply(lambda x: 1 if x > 0 else 0)
+df["Churn"] = df["Churn"].map({"Yes": 1, "No": 0})
 
 # ============================================================
-# HANDLE MISSING VALUE
+# HANDLE MISSING VALUE & NUMERIC CONVERSION
 # ============================================================
+df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
 df = df.fillna(df.median(numeric_only=True))
 df = df.fillna(df.mode().iloc[0])
 
@@ -85,13 +86,13 @@ st.subheader("🎯 2. Target Variable")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("**Distribusi Target**")
-    st.dataframe(df["num"].value_counts())
+    st.markdown("**Distribusi Target (Churn)**")
+    st.dataframe(df["Churn"].value_counts())
 
 with col2:
     fig, ax = plt.subplots(figsize=(3.5,2.5))
-    df["num"].value_counts().plot(kind="bar", ax=ax)
-    ax.set_xlabel("Kelas Penyakit")
+    df["Churn"].value_counts().plot(kind="bar", ax=ax, color=["green", "red"])
+    ax.set_xlabel("Churn")
     ax.set_ylabel("Jumlah")
     st.pyplot(fig)
 
@@ -102,12 +103,12 @@ st.divider()
 # ============================================================
 st.subheader("⚙️ 3. Preprocessing Data")
 
-df_proc = df.drop(columns=["id", "dataset"], errors="ignore")
-df_proc = df_proc.replace({"TRUE": 1, "FALSE": 0, True: 1, False: 0})
+df_proc = df.drop(columns=["customerID"], errors="ignore")
+df_proc = df_proc.replace({"Yes": 1, "No": 0})
 df_proc = pd.get_dummies(df_proc, drop_first=True)
 
-X = df_proc.drop(columns=["num"])
-y = df_proc["num"]
+X = df_proc.drop(columns=["Churn"])
+y = df_proc["Churn"]
 
 st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
 st.write(list(X.columns))
@@ -135,7 +136,6 @@ with col2:
 with col3:
     st.metric("Data Testing", X_test.shape[0])
 
-st.markdown("**Rasio:** 80% Training – 20% Testing")
 st.divider()
 
 # ============================================================
@@ -170,20 +170,13 @@ with col1:
     st.text(classification_report(y_test, y_pred))
 
 with col2:
-    # ✅ CONFUSION MATRIX WITH LABELS (TP, TN, FP, FN)
     fig_cm, ax_cm = plt.subplots(figsize=(4,3))
     cm = confusion_matrix(y_test, y_pred)
-
-    # Label posisi
     labels = [["TN", "FP"], ["FN", "TP"]]
-
     sns.heatmap(cm, annot=labels, fmt="", cmap="Blues", ax=ax_cm, cbar=False)
-
-    # Tambahkan angka di bawah label
     for i in range(2):
         for j in range(2):
             ax_cm.text(j + 0.5, i + 0.65, f"{cm[i, j]}", ha='center', va='center', color='black')
-
     ax_cm.set_xlabel("Predicted")
     ax_cm.set_ylabel("Actual")
     ax_cm.set_title("Confusion Matrix")
@@ -191,11 +184,11 @@ with col2:
 
 st.markdown("""
 ### 📘 Penjelasan Confusion Matrix
-- **TP (True Positive)** → Model benar memprediksi pasien **sakit** 
-- **TN (True Negative)** → Model benar memprediksi pasien **sehat** 
-- **FP (False Positive)** → Model salah memprediksi pasien sehat sebagai sakit 
-- **FN (False Negative)** → Model salah memprediksi pasien sakit sebagai sehat 
-- **FN paling kritis**, karena pasien sakit bisa tidak terdeteksi.
+- **TP (True Positive)** → Model benar memprediksi pelanggan **churn**
+- **TN (True Negative)** → Model benar memprediksi pelanggan **tidak churn**
+- **FP (False Positive)** → Model salah memprediksi pelanggan tidak churn sebagai churn
+- **FN (False Negative)** → Model salah memprediksi pelanggan churn sebagai tidak churn
+- FN penting karena pelanggan yang akan pergi bisa tidak terdeteksi.
 """)
 
 st.divider()
@@ -220,7 +213,7 @@ if hasattr(model, "feature_importances_"):
     with colB:
         st.markdown("""
         ### 📘 Penjelasan Feature Importance
-        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi.
+        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi churn.
         - Semakin panjang batang → semakin besar kontribusi fitur.
         - Model pohon menghitung pentingnya fitur berdasarkan:
           - Seberapa sering fitur digunakan untuk split
@@ -256,9 +249,9 @@ with colP:
 with colQ:
     st.markdown("""
     ### 📘 Penjelasan Precision‑Recall Curve
-    - Cocok untuk dataset **imbalanced**.
-    - **Precision** → Akurasi prediksi positif.
-    - **Recall** → Kemampuan menemukan kasus positif.
+    - Cocok untuk dataset **imbalanced** seperti churn.
+    - **Precision** → Akurasi prediksi pelanggan churn.
+    - **Recall** → Kemampuan menemukan pelanggan churn.
     - **AP (Average Precision)**:
       - Mendekati 1 → model sangat baik
       - Mendekati 0.5 → model biasa saja
@@ -267,90 +260,8 @@ with colQ:
 st.divider()
 
 # ============================================================
-# FORM INPUT MANUAL
-# ============================================================
-st.subheader("🧑‍⚕️ 6. Prediksi Penyakit Jantung")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    age = st.number_input("Usia", 1, 100, 50)
-    trestbps = st.number_input("Tekanan Darah Istirahat", 80, 200, 130)
-    chol = st.number_input("Kolesterol", 100, 400, 220)
-    thalch = st.number_input("Detak Jantung Maksimum (thalch)", 60, 220, 150)
-    oldpeak = st.number_input("Oldpeak", 0.0, 6.0, 1.0)
-    ca = st.selectbox("Jumlah Pembuluh Darah Tersumbat", [0, 1, 2, 3])
-
-with col2:
-    sex = st.selectbox("Jenis Kelamin", ["Perempuan", "Laki-laki"])
-    fbs = st.selectbox("Gula Darah Puasa > 120 mg/dL?", ["Tidak", "Ya"])
-    exang = st.selectbox("Nyeri Dada Saat Olahraga?", ["Tidak", "Ya"])
-
-    cp = st.selectbox("Tipe Nyeri Dada", [
-        "typical angina",
-        "atypical angina",
-        "non-anginal"
-    ])
-
-    restecg = st.selectbox("Hasil ECG", [
-        "normal",
-        "st-t abnormality"
-    ])
-
-    slope = st.selectbox("Slope ST Segment", [
-        "flat",
-        "upsloping"
-    ])
-
-    thal = st.selectbox("Thalassemia", [
-        "normal",
-        "reversable defect"
-    ])
-
-# ============================================================
-# KONVERSI INPUT KE DUMMY
-# ============================================================
-input_data = {col: 0 for col in X.columns}
-
-input_data["age"] = age
-input_data["trestbps"] = trestbps
-input_data["chol"] = chol
-input_data["fbs"] = 1 if fbs == "Ya" else 0
-input_data["thalch"] = thalch
-input_data["exang"] = 1 if exang == "Ya" else 0
-input_data["oldpeak"] = oldpeak
-input_data["ca"] = ca
-input_data["sex_Male"] = 1 if sex == "Laki-laki" else 0
-
-for feature, value in {
-    "cp": cp,
-    "restecg": restecg,
-    "slope": slope,
-    "thal": thal
-}.items():
-    colname = f"{feature}_{value}"
-    if colname in input_data:
-        input_data[colname] = 1
-
-# ============================================================
-# PREDIKSI
-# ============================================================
-if st.button("🔍 Prediksi Penyakit Jantung"):
-    input_df = pd.DataFrame([input_data])
-    prediction = model.predict(input_df)[0]
-
-    st.subheader("📌 Hasil Prediksi")
-    if prediction == 0:
-        st.success("✅ Pasien **TIDAK terdeteksi penyakit jantung**")
-    else:
-        st.error("⚠️ Pasien **TERDETEKSI penyakit jantung**")
-
-# ============================================================
 # FOOTER
 # ============================================================
-st.divider()
 st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
-)
-
