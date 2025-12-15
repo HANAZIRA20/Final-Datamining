@@ -20,40 +20,39 @@ from sklearn.ensemble import RandomForestClassifier
 # PAGE CONFIG
 # ============================================================
 st.set_page_config(
-    page_title="Telco Customer Churn",
-    page_icon="📱",
+    page_title="Bank Marketing Churn Prediction",
+    page_icon="🏦",
     layout="wide"
 )
 
 # ============================================================
 # HEADER
 # ============================================================
-st.markdown("<h1 style='text-align:center;'>📱 Telco Customer Churn Prediction</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>🏦 Bank Marketing Churn Prediction</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Decision Tree & Random Forest | Data Mining Project</p>", unsafe_allow_html=True)
 st.divider()
 
 # ============================================================
 # LOAD DATASET
 # ============================================================
-DATA_PATH = "Dataset Telco-Customer-Churn.csv"
+DATA_PATH = "bank-additional-full.csv"
 
 if not os.path.exists(DATA_PATH):
     st.error("❌ Dataset tidak ditemukan.")
     st.stop()
 
-df = pd.read_csv(DATA_PATH)
+df = pd.read_csv(DATA_PATH, sep=";")
 st.success("✅ Dataset berhasil dimuat")
 
 # ============================================================
 # FIX TARGET → BINARY
 # ============================================================
-df["Churn"] = df["Churn"].map({"Yes": 1, "No": 0})
+df["y"] = df["y"].map({"yes": 1, "no": 0})
 
 # ============================================================
-# HANDLE MISSING VALUE & NUMERIC CONVERSION
+# HANDLE MISSING VALUE
 # ============================================================
-df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
-df = df.fillna(df.median(numeric_only=True))
+df = df.replace("unknown", pd.NA)
 df = df.fillna(df.mode().iloc[0])
 
 # ============================================================
@@ -86,12 +85,12 @@ st.subheader("🎯 2. Target Variable")
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("**Distribusi Target (Churn)**")
-    st.dataframe(df["Churn"].value_counts())
+    st.markdown("**Distribusi Target (y)**")
+    st.dataframe(df["y"].value_counts())
 
 with col2:
     fig, ax = plt.subplots(figsize=(3.5,2.5))
-    df["Churn"].value_counts().plot(kind="bar", ax=ax, color=["green", "red"])
+    df["y"].value_counts().plot(kind="bar", ax=ax, color=["green", "red"])
     ax.set_xlabel("Churn")
     ax.set_ylabel("Jumlah")
     st.pyplot(fig)
@@ -103,12 +102,11 @@ st.divider()
 # ============================================================
 st.subheader("⚙️ 3. Preprocessing Data")
 
-df_proc = df.drop(columns=["customerID"], errors="ignore")
-df_proc = df_proc.replace({"Yes": 1, "No": 0})
+df_proc = df.copy()
 df_proc = pd.get_dummies(df_proc, drop_first=True)
 
-X = df_proc.drop(columns=["Churn"])
-y = df_proc["Churn"]
+X = df_proc.drop(columns=["y"])
+y = df_proc["y"]
 
 st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
 st.write(list(X.columns))
@@ -184,11 +182,10 @@ with col2:
 
 st.markdown("""
 ### 📘 Penjelasan Confusion Matrix
-- **TP (True Positive)** → Model benar memprediksi pelanggan **churn**
-- **TN (True Negative)** → Model benar memprediksi pelanggan **tidak churn**
-- **FP (False Positive)** → Model salah memprediksi pelanggan tidak churn sebagai churn
-- **FN (False Negative)** → Model salah memprediksi pelanggan churn sebagai tidak churn
-- FN penting karena pelanggan yang akan pergi bisa tidak terdeteksi.
+- **TP (True Positive)** → Model benar memprediksi pelanggan **berlangganan**
+- **TN (True Negative)** → Model benar memprediksi pelanggan **tidak berlangganan**
+- **FP (False Positive)** → Model salah memprediksi pelanggan tidak berlangganan sebagai berlangganan
+- **FN (False Negative)** → Model salah memprediksi pelanggan berlangganan sebagai tidak berlangganan
 """)
 
 st.divider()
@@ -213,11 +210,8 @@ if hasattr(model, "feature_importances_"):
     with colB:
         st.markdown("""
         ### 📘 Penjelasan Feature Importance
-        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi churn.
+        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi.
         - Semakin panjang batang → semakin besar kontribusi fitur.
-        - Model pohon menghitung pentingnya fitur berdasarkan:
-          - Seberapa sering fitur digunakan untuk split
-          - Seberapa besar fitur mengurangi impurity
         """)
 
 st.divider()
@@ -249,9 +243,9 @@ with colP:
 with colQ:
     st.markdown("""
     ### 📘 Penjelasan Precision‑Recall Curve
-    - Cocok untuk dataset **imbalanced** seperti churn.
-    - **Precision** → Akurasi prediksi pelanggan churn.
-    - **Recall** → Kemampuan menemukan pelanggan churn.
+    - Cocok untuk dataset **imbalanced** seperti ini.
+    - **Precision** → Akurasi prediksi pelanggan berlangganan.
+    - **Recall** → Kemampuan menemukan pelanggan berlangganan.
     - **AP (Average Precision)**:
       - Mendekati 1 → model sangat baik
       - Mendekati 0.5 → model biasa saja
@@ -262,9 +256,7 @@ st.divider()
 # ============================================================
 # FOOTER
 # ============================================================
-st.divider()
 st.markdown(
     "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
-
