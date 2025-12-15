@@ -20,40 +20,34 @@ from sklearn.ensemble import RandomForestClassifier
 # PAGE CONFIG
 # ============================================================
 st.set_page_config(
-    page_title="Bank Marketing Churn Prediction",
-    page_icon="🏦",
+    page_title="Wine Quality Classification",
+    page_icon="🍷",
     layout="wide"
 )
 
 # ============================================================
 # HEADER
 # ============================================================
-st.markdown("<h1 style='text-align:center;'>🏦 Bank Marketing Churn Prediction</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>🍷 White Wine Quality Classification</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Decision Tree & Random Forest | Data Mining Project</p>", unsafe_allow_html=True)
 st.divider()
 
 # ============================================================
 # LOAD DATASET
 # ============================================================
-DATA_PATH = "bank-additional-full.csv"
+DATA_PATH = "winequality-white.csv"
 
 if not os.path.exists(DATA_PATH):
-    st.error("❌ Dataset tidak ditemukan.")
+    st.error("❌ Dataset winequality-white.csv tidak ditemukan.")
     st.stop()
 
 df = pd.read_csv(DATA_PATH, sep=";")
 st.success("✅ Dataset berhasil dimuat")
 
 # ============================================================
-# FIX TARGET → BINARY
+# TARGET → BINARY CLASSIFICATION
 # ============================================================
-df["y"] = df["y"].map({"yes": 1, "no": 0})
-
-# ============================================================
-# HANDLE MISSING VALUE
-# ============================================================
-df = df.replace("unknown", pd.NA)
-df = df.fillna(df.mode().iloc[0])
+df["quality_label"] = df["quality"].apply(lambda x: 1 if x >= 7 else 0)
 
 # ============================================================
 # DATA OVERVIEW
@@ -78,20 +72,19 @@ with col2:
 st.divider()
 
 # ============================================================
-# TARGET VARIABLE
+# TARGET DISTRIBUTION
 # ============================================================
-st.subheader("🎯 2. Target Variable")
+st.subheader("🎯 2. Distribusi Target (Quality Label)")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("**Distribusi Target (y)**")
-    st.dataframe(df["y"].value_counts())
+    st.dataframe(df["quality_label"].value_counts())
 
 with col2:
     fig, ax = plt.subplots(figsize=(3.5,2.5))
-    df["y"].value_counts().plot(kind="bar", ax=ax, color=["green", "red"])
-    ax.set_xlabel("Churn")
+    df["quality_label"].value_counts().plot(kind="bar", ax=ax, color=["green", "red"])
+    ax.set_xlabel("Quality Label")
     ax.set_ylabel("Jumlah")
     st.pyplot(fig)
 
@@ -103,10 +96,9 @@ st.divider()
 st.subheader("⚙️ 3. Preprocessing Data")
 
 df_proc = df.copy()
-df_proc = pd.get_dummies(df_proc, drop_first=True)
 
-X = df_proc.drop(columns=["y"])
-y = df_proc["y"]
+X = df_proc.drop(columns=["quality", "quality_label"])
+y = df_proc["quality_label"]
 
 st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
 st.write(list(X.columns))
@@ -182,10 +174,10 @@ with col2:
 
 st.markdown("""
 ### 📘 Penjelasan Confusion Matrix
-- **TP (True Positive)** → Model benar memprediksi pelanggan **berlangganan**
-- **TN (True Negative)** → Model benar memprediksi pelanggan **tidak berlangganan**
-- **FP (False Positive)** → Model salah memprediksi pelanggan tidak berlangganan sebagai berlangganan
-- **FN (False Negative)** → Model salah memprediksi pelanggan berlangganan sebagai tidak berlangganan
+- **TP** → Model benar memprediksi wine berkualitas baik  
+- **TN** → Model benar memprediksi wine kualitas biasa  
+- **FP** → Wine biasa diprediksi sebagai kualitas baik  
+- **FN** → Wine bagus diprediksi sebagai kualitas biasa  
 """)
 
 st.divider()
@@ -210,8 +202,8 @@ if hasattr(model, "feature_importances_"):
     with colB:
         st.markdown("""
         ### 📘 Penjelasan Feature Importance
-        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi.
-        - Semakin panjang batang → semakin besar kontribusi fitur.
+        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi kualitas wine.
+        - Biasanya: alcohol, density, sulphates, volatile acidity.
         """)
 
 st.divider()
@@ -243,12 +235,9 @@ with colP:
 with colQ:
     st.markdown("""
     ### 📘 Penjelasan Precision‑Recall Curve
-    - Cocok untuk dataset **imbalanced** seperti ini.
-    - **Precision** → Akurasi prediksi pelanggan berlangganan.
-    - **Recall** → Kemampuan menemukan pelanggan berlangganan.
-    - **AP (Average Precision)**:
-      - Mendekati 1 → model sangat baik
-      - Mendekati 0.5 → model biasa saja
+    - Cocok untuk dataset **imbalanced** seperti wine quality.
+    - **Precision** → Akurasi prediksi wine berkualitas baik.
+    - **Recall** → Kemampuan menemukan wine berkualitas baik.
     """)
 
 st.divider()
