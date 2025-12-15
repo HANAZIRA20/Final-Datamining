@@ -12,42 +12,37 @@ import seaborn as sns
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.metrics import precision_recall_curve, average_precision_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
 
 # ============================================================
 # PAGE CONFIG
 # ============================================================
 st.set_page_config(
-    page_title="Wine Quality Classification",
-    page_icon="🍷",
+    page_title="Anime Type Classification",
+    page_icon="🎌",
     layout="wide"
 )
 
 # ============================================================
 # HEADER
 # ============================================================
-st.markdown("<h1 style='text-align:center;'>🍷 White Wine Quality Classification</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>🎌 Anime Type Classification</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Decision Tree & Random Forest | Data Mining Project</p>", unsafe_allow_html=True)
 st.divider()
 
 # ============================================================
 # LOAD DATASET
 # ============================================================
-DATA_PATH = "winequality-white.csv"
+DATA_PATH = "anime.csv"
 
 if not os.path.exists(DATA_PATH):
-    st.error("❌ Dataset winequality-white.csv tidak ditemukan.")
+    st.error("❌ Dataset anime.csv tidak ditemukan.")
     st.stop()
 
-df = pd.read_csv(DATA_PATH, sep=";")
+df = pd.read_csv(DATA_PATH)
 st.success("✅ Dataset berhasil dimuat")
-
-# ============================================================
-# TARGET → BINARY CLASSIFICATION
-# ============================================================
-df["quality_label"] = df["quality"].apply(lambda x: 1 if x >= 7 else 0)
 
 # ============================================================
 # DATA OVERVIEW
@@ -72,19 +67,20 @@ with col2:
 st.divider()
 
 # ============================================================
-# TARGET DISTRIBUTION
+# TARGET VARIABLE
 # ============================================================
-st.subheader("🎯 2. Distribusi Target (Quality Label)")
+st.subheader("🎯 2. Target Variable (Type Anime)")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.dataframe(df["quality_label"].value_counts())
+    st.markdown("**Distribusi Target**")
+    st.dataframe(df["type"].value_counts())
 
 with col2:
-    fig, ax = plt.subplots(figsize=(3.5,2.5))
-    df["quality_label"].value_counts().plot(kind="bar", ax=ax, color=["green", "red"])
-    ax.set_xlabel("Quality Label")
+    fig, ax = plt.subplots(figsize=(4,3))
+    df["type"].value_counts().plot(kind="bar", ax=ax)
+    ax.set_xlabel("Type Anime")
     ax.set_ylabel("Jumlah")
     st.pyplot(fig)
 
@@ -97,10 +93,26 @@ st.subheader("⚙️ 3. Preprocessing Data")
 
 df_proc = df.copy()
 
-X = df_proc.drop(columns=["quality", "quality_label"])
-y = df_proc["quality_label"]
+# Hapus kolom tidak relevan
+df_proc = df_proc.drop(columns=["anime_id", "name"], errors="ignore")
 
-st.write("🔍 Kolom fitur yang digunakan untuk prediksi:")
+# Handle missing value
+df_proc["episodes"] = df_proc["episodes"].replace("?", None)
+df_proc["episodes"] = pd.to_numeric(df_proc["episodes"])
+df_proc = df_proc.fillna(df_proc.median(numeric_only=True))
+
+# Encode genre (pakai panjang genre)
+df_proc["genre_count"] = df_proc["genre"].apply(lambda x: len(str(x).split(",")))
+df_proc = df_proc.drop(columns=["genre"])
+
+# Encode target
+le = LabelEncoder()
+df_proc["type_encoded"] = le.fit_transform(df_proc["type"])
+
+X = df_proc.drop(columns=["type", "type_encoded"])
+y = df_proc["type_encoded"]
+
+st.write("🔍 Fitur yang digunakan:")
 st.write(list(X.columns))
 
 st.success("✅ Preprocessing selesai")
@@ -126,6 +138,7 @@ with col2:
 with col3:
     st.metric("Data Testing", X_test.shape[0])
 
+st.markdown("**Rasio:** 80% Training – 20% Testing")
 st.divider()
 
 # ============================================================
@@ -141,7 +154,10 @@ model_choice = st.sidebar.selectbox(
 if model_choice == "Decision Tree":
     model = DecisionTreeClassifier(random_state=42)
 else:
-    model = RandomForestClassifier(random_state=42)
+    model = RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
+    )
 
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
@@ -157,28 +173,26 @@ col1, col2 = st.columns(2)
 with col1:
     st.metric("Accuracy", f"{acc:.2f}")
     st.text("Classification Report")
-    st.text(classification_report(y_test, y_pred))
+    st.text(classification_report(y_test, y_pred, target_names=le.classes_))
 
 with col2:
     fig_cm, ax_cm = plt.subplots(figsize=(4,3))
     cm = confusion_matrix(y_test, y_pred)
-    labels = [["TN", "FP"], ["FN", "TP"]]
-    sns.heatmap(cm, annot=labels, fmt="", cmap="Blues", ax=ax_cm, cbar=False)
-    for i in range(2):
-        for j in range(2):
-            ax_cm.text(j + 0.5, i + 0.65, f"{cm[i, j]}", ha='center', va='center', color='black')
+
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=le.classes_,
+        yticklabels=le.classes_,
+        ax=ax_cm
+    )
+
     ax_cm.set_xlabel("Predicted")
     ax_cm.set_ylabel("Actual")
     ax_cm.set_title("Confusion Matrix")
     st.pyplot(fig_cm)
-
-st.markdown("""
-### 📘 Penjelasan Confusion Matrix
-- **TP** → Model benar memprediksi wine berkualitas baik  
-- **TN** → Model benar memprediksi wine kualitas biasa  
-- **FP** → Wine biasa diprediksi sebagai kualitas baik  
-- **FN** → Wine bagus diprediksi sebagai kualitas biasa  
-""")
 
 st.divider()
 
@@ -188,64 +202,49 @@ st.divider()
 if hasattr(model, "feature_importances_"):
     st.subheader("📌 Feature Importance")
 
-    colA, colB = st.columns([1,1])
+    importances = pd.Series(model.feature_importances_, index=X.columns)
+    importances = importances.sort_values(ascending=True)
 
-    with colA:
-        importances = pd.Series(model.feature_importances_, index=X.columns)
-        importances = importances.sort_values(ascending=True)
-
-        fig_imp, ax_imp = plt.subplots(figsize=(3,4))
-        importances.plot(kind="barh", ax=ax_imp, color="teal")
-        ax_imp.set_title("Feature Importance")
-        st.pyplot(fig_imp)
-
-    with colB:
-        st.markdown("""
-        ### 📘 Penjelasan Feature Importance
-        - Menunjukkan fitur mana yang paling berpengaruh dalam prediksi kualitas wine.
-        - Biasanya: alcohol, density, sulphates, volatile acidity.
-        """)
+    fig_imp, ax_imp = plt.subplots(figsize=(4,4))
+    importances.plot(kind="barh", ax=ax_imp)
+    ax_imp.set_title("Feature Importance")
+    st.pyplot(fig_imp)
 
 st.divider()
 
 # ============================================================
-# PRECISION-RECALL CURVE
+# PREDIKSI MANUAL
 # ============================================================
-st.subheader("📈 Precision-Recall Curve")
+st.subheader("🎮 6. Prediksi Tipe Anime")
 
-if hasattr(model, "predict_proba"):
-    y_scores = model.predict_proba(X_test)[:, 1]
-else:
-    y_scores = model.predict(X_test)
+col1, col2 = st.columns(2)
 
-precision, recall, thresholds = precision_recall_curve(y_test, y_scores)
-avg_precision = average_precision_score(y_test, y_scores)
+with col1:
+    episodes = st.number_input("Jumlah Episode", 1, 2000, 12)
+    rating = st.slider("Rating", 0.0, 10.0, 7.5)
+    members = st.number_input("Jumlah Member", 0, 5000000, 50000)
 
-colP, colQ = st.columns([1,1])
+with col2:
+    genre_count = st.slider("Jumlah Genre", 1, 10, 2)
 
-with colP:
-    fig_pr, ax_pr = plt.subplots(figsize=(3,3))
-    ax_pr.plot(recall, precision, color="purple", linewidth=2)
-    ax_pr.set_title(f"PR Curve (AP = {avg_precision:.2f})")
-    ax_pr.set_xlabel("Recall")
-    ax_pr.set_ylabel("Precision")
-    ax_pr.grid(True)
-    st.pyplot(fig_pr)
+if st.button("🔍 Prediksi Tipe Anime"):
+    input_df = pd.DataFrame([{
+        "episodes": episodes,
+        "rating": rating,
+        "members": members,
+        "genre_count": genre_count
+    }])
 
-with colQ:
-    st.markdown("""
-    ### 📘 Penjelasan Precision‑Recall Curve
-    - Cocok untuk dataset **imbalanced** seperti wine quality.
-    - **Precision** → Akurasi prediksi wine berkualitas baik.
-    - **Recall** → Kemampuan menemukan wine berkualitas baik.
-    """)
+    prediction = model.predict(input_df)[0]
+    anime_type = le.inverse_transform([prediction])[0]
 
-st.divider()
+    st.success(f"🎯 Prediksi Tipe Anime: **{anime_type}**")
 
 # ============================================================
 # FOOTER
 # ============================================================
+st.divider()
 st.markdown(
-    "<p style='text-align:center;font-size:12px;'>Data Mining Project | Streamlit</p>",
+    "<p style='text-align:center;font-size:12px;'>Anime Data Mining Project | Streamlit</p>",
     unsafe_allow_html=True
 )
