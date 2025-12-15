@@ -96,13 +96,22 @@ df_proc = df.copy()
 # Hapus kolom tidak relevan
 df_proc = df_proc.drop(columns=["anime_id", "name"], errors="ignore")
 
-# Handle missing value
-df_proc["episodes"] = df_proc["episodes"].replace("?", None)
-df_proc["episodes"] = pd.to_numeric(df_proc["episodes"])
-df_proc = df_proc.fillna(df_proc.median(numeric_only=True))
+# ---------- FIX EPISODES (ANTI ERROR) ----------
+df_proc["episodes"] = pd.to_numeric(
+    df_proc["episodes"],
+    errors="coerce"
+)
+df_proc["episodes"] = df_proc["episodes"].fillna(
+    df_proc["episodes"].median()
+)
 
-# Encode genre (pakai panjang genre)
-df_proc["genre_count"] = df_proc["genre"].apply(lambda x: len(str(x).split(",")))
+# Handle rating kosong
+df_proc["rating"] = df_proc["rating"].fillna(df_proc["rating"].median())
+
+# Encode genre → jumlah genre
+df_proc["genre_count"] = df_proc["genre"].apply(
+    lambda x: len(str(x).split(",")) if pd.notnull(x) else 0
+)
 df_proc = df_proc.drop(columns=["genre"])
 
 # Encode target
@@ -222,9 +231,9 @@ col1, col2 = st.columns(2)
 with col1:
     episodes = st.number_input("Jumlah Episode", 1, 2000, 12)
     rating = st.slider("Rating", 0.0, 10.0, 7.5)
-    members = st.number_input("Jumlah Member", 0, 5000000, 50000)
 
 with col2:
+    members = st.number_input("Jumlah Member", 0, 5000000, 50000)
     genre_count = st.slider("Jumlah Genre", 1, 10, 2)
 
 if st.button("🔍 Prediksi Tipe Anime"):
